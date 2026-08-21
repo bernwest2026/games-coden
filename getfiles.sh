@@ -4,7 +4,9 @@
 
 rm -rf work/
 
-input=$1"bernwest2026"
+n=$(zenity --text "gib deinen namen ein:" --entry)
+
+input=$n"bernwest2026"
 
 name=$(echo $input | sha1sum | awk '{print $1}')
 
@@ -17,4 +19,10 @@ cd work/
 git clone --no-checkout --depth=1 --filter=tree:0 https://github.com/bernwest2026/games-coden .
 git sparse-checkout set --no-cone /$name
 git checkout
+
+
+
+
+
+
 
