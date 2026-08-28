@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ball-Klick-Spiel</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #111827;
+      color: white;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 20px 0 10px;
+    }
+
+    #score {
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+
+    #game {
+      width: 90vw;
+      max-width: 800px;
+      height: 500px;
+      margin: auto;
+      background: #1f2937;
+      border: 3px solid #374151;
+      border-radius: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #ball {
+      width: 50px;
+      height: 50px;
+      background: #22c55e;
+      border-radius: 50%;
+      position: absolute;
+      cursor: pointer;
+      box-shadow: 0 0 20px #22c55e;
+    }
+
+    button {
+      margin: 15px;
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #3b82f6;
+      color: white;
+    }
+
+    button:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🎯 Klick den Ball!</h1>
+
+  <div id="score">
+    Punkte: <span id="points">0</span>
+  </div>
+
+  <button onclick="startGame()">Neues Spiel</button>
+
+  <div id="game">
+    <div id="ball"></div>
+  </div>
+
+  <script>
+    const ball = document.getElementById("ball");
+    const game = document.getElementById("game");
+    const pointsText = document.getElementById("points");
+
+    let points = 0;
+
+    function moveBall() {
+      const maxX = game.clientWidth - ball.offsetWidth;
+      const maxY = game.clientHeight - ball.offsetHeight;
+
+      const x = Math.random() * maxX;
+      const y = Math.random() * maxY;
+
+      ball.style.left = x + "px";
+      ball.style.top = y + "px";
+    }
+
+    ball.addEventListener("click", function() {
+      points++;
+      pointsText.textContent = points;
+      moveBall();
+    });
+
+    function startGame() {
+      points = 0;
+      pointsText.textContent = points;
+      moveBall();
+    }
+
+    startGame();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klick-Spiel</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #222;
+      color: white;
+    }
+
+    h1 {
+      margin: 20px;
+    }
+
+    #score {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    #game {
+      position: relative;
+      width: 90%;
+      max-width: 700px;
+      height: 500px;
+      margin: auto;
+      background: #333;
+      border: 3px solid white;
+      overflow: hidden;
+    }
+
+    #target {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: red;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    button {
+      margin: 15px;
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🎯 Klick den Kreis!</h1>
+
+  <div id="score">Punkte: 0</div>
+
+  <div id="game">
+    <div id="target"></div>
+  </div>
+
+  <button onclick="startGame()">Neustart</button>
+
+  <script>
+    let score = 0;
+
+    const target = document.getElementById("target");
+    const game = document.getElementById("game");
+    const scoreText = document.getElementById("score");
+
+    function moveTarget() {
+      const maxX = game.clientWidth - target.clientWidth;
+      const maxY = game.clientHeight - target.clientHeight;
+
+      const x = Math.random() * maxX;
+      const y = Math.random() * maxY;
+
+      target.style.left = x + "px";
+      target.style.top = y + "px";
+    }
+
+    target.addEventListener("click", function() {
+      score++;
+      scoreText.textContent = "Punkte: " + score;
+
+      moveTarget();
+    });
+
+    function startGame() {
+      score = 0;
+      scoreText.textContent = "Punkte: 0";
+      moveTarget();
+    }
+
+    startGame();
+  </script>
+
+</body>
+</html>
