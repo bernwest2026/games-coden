@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klick den Kreis!</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #111827;
+      color: white;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    #info {
+      font-size: 20px;
+      margin-bottom: 15px;
+    }
+
+    #spiel {
+      position: relative;
+      width: 90%;
+      max-width: 700px;
+      height: 450px;
+      margin: auto;
+      background: #1f2937;
+      border: 3px solid #374151;
+      border-radius: 15px;
+      overflow: hidden;
+    }
+
+    #kreis {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      background: #ef4444;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 20px #ef4444;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 12px 25px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      background: #22c55e;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #16a34a;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🎯 Klick den Kreis!</h1>
+
+  <div id="info">
+    Punkte: <span id="punkte">0</span>
+    &nbsp; | &nbsp;
+    Zeit: <span id="zeit">30</span>s
+  </div>
+
+  <div id="spiel">
+    <div id="kreis"></div>
+  </div>
+
+  <button onclick="startSpiel()">Neues Spiel</button>
+
+  <script>
+    const kreis = document.getElementById("kreis");
+    const spiel = document.getElementById("spiel");
+    const punkteAnzeige = document.getElementById("punkte");
+    const zeitAnzeige = document.getElementById("zeit");
+
+    let punkte = 0;
+    let zeit = 30;
+    let timer;
+
+    function bewegeKreis() {
+      const maxX = spiel.clientWidth - kreis.offsetWidth;
+      const maxY = spiel.clientHeight - kreis.offsetHeight;
+
+      const x = Math.random() * maxX;
+      const y = Math.random() * maxY;
+
+      kreis.style.left = x + "px";
+      kreis.style.top = y + "px";
+    }
+
+    kreis.addEventListener("click", function() {
+      if (zeit <= 0) return;
+
+      punkte++;
+      punkteAnzeige.textContent = punkte;
+
+      bewegeKreis();
+    });
+
+    function startSpiel() {
+      clearInterval(timer);
+
+      punkte = 0;
+      zeit = 30;
+
+      punkteAnzeige.textContent = punkte;
+      zeitAnzeige.textContent = zeit;
+
+      kreis.style.display = "block";
+      bewegeKreis();
+
+      timer = setInterval(() => {
+        zeit--;
+        zeitAnzeige.textContent = zeit;
+
+        if (zeit <= 0) {
+          clearInterval(timer);
+          kreis.style.display = "none";
+          alert("🎉 Spiel vorbei! Du hast " + punkte + " Punkte!");
+        }
+      }, 1000);
+    }
+
+    startSpiel();
+  </script>
+
+</body>
+</html>
