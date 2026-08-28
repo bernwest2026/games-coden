@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Football Pack Opener</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #07111f, #12345b);
+    color: white;
+    min-height: 100vh;
+    text-align: center;
+}
+
+header {
+    padding: 20px;
+    background: rgba(0,0,0,.35);
+    box-shadow: 0 4px 20px rgba(0,0,0,.3);
+}
+
+h1 {
+    margin: 0 0 10px;
+}
+
+.coins {
+    font-size: 20px;
+    color: #ffd700;
+}
+
+.container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 30px 20px;
+}
+
+.packs {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+
+.pack {
+    width: 220px;
+    min-height: 300px;
+    padding: 20px;
+    border-radius: 20px;
+    background: linear-gradient(145deg, #1e90ff, #073b8f);
+    box-shadow: 0 15px 35px rgba(0,0,0,.45);
+    transition: .25s;
+}
+
+.pack:hover {
+    transform: translateY(-10px) scale(1.03);
+}
+
+.pack.gold {
+    background: linear-gradient(145deg, #ffd700, #c77700);
+}
+
+.pack.legend {
+    background: linear-gradient(145deg, #b000ff, #420080);
+}
+
+.pack-icon {
+    font-size: 90px;
+    margin: 15px;
+}
+
+.pack h2 {
+    margin: 5px;
+}
+
+.pack p {
+    color: #eee;
+}
+
+button {
+    border: none;
+    border-radius: 12px;
+    padding: 13px 22px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #00e676;
+    color: #04130b;
+    transition: .2s;
+}
+
+button:hover {
+    transform: scale(1.05);
+}
+
+button:disabled {
+    background: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+#result {
+    margin-top: 40px;
+    min-height: 300px;
+}
+
+.player-card {
+    width: 270px;
+    margin: auto;
+    padding: 25px;
+    border-radius: 25px;
+    background: linear-gradient(145deg, #eee, #aaa);
+    color: #111;
+    box-shadow: 0 0 50px rgba(255,255,255,.4);
+    animation: appear .7s ease;
+}
+
+.player-card.common {
+    background: linear-gradient(145deg, #ddd, #999);
+}
+
+.player-card.rare {
+    background: linear-gradient(145deg, #55aaff, #1455a0);
+    color: white;
+}
+
+.player-card.epic {
+    background: linear-gradient(145deg, #d15cff, #6c00a8);
+    color: white;
+}
+
+.player-card.legendary {
+    background: linear-gradient(145deg, #ffe45c, #ff8c00);
+    color: #211500;
+}
+
+.player-face {
+    font-size: 85px;
+}
+
+.rating {
+    font-size: 55px;
+    font-weight: bold;
+}
+
+.position {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.name {
+    font-size: 26px;
+    font-weight: bold;
+    margin: 10px;
+}
+
+.rarity {
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.stat {
+    background: rgba(0,0,0,.15);
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.inventory {
+    margin-top: 50px;
+}
+
+.collection {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
+
+.small-card {
+    width: 150px;
+    padding: 15px;
+    border-radius: 15px;
+    background: rgba(255,255,255,.12);
+}
+
+.small-card .face {
+    font-size: 45px;
+}
+
+.small-card strong {
+    display: block;
+}
+
+.message {
+    font-size: 20px;
+    min-height: 30px;
+    margin: 20px;
+}
+
+@keyframes appear {
+    0% {
+        transform: scale(.1) rotate(-20deg);
+        opacity: 0;
+    }
+    70% {
+        transform: scale(1.1) rotate(5deg);
+    }
+    100% {
+        transform: scale(1) rotate(0);
+        opacity: 1;
+    }
+}
+
+@keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-10px) rotate(-3deg); }
+    75% { transform: translateX(10px) rotate(3deg); }
+}
+
+.shake {
+    animation: shake .4s infinite;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>⚽ FOOTBALL PACK OPENER</h1>
+    <div class="coins">🪙 Coins: <span id="coins">5000</span></div>
+</header>
+
+<div class="container">
+
+    <div class="message" id="message">
+        Öffne ein Pack und finde deinen nächsten Star!
+    </div>
+
+    <div class="packs">
+
+        <div class="pack">
+            <div class="pack-icon">📦</div>
+            <h2>Bronze Pack</h2>
+            <p>3 Spieler</p>
+            <p>Preis: 250 🪙</p>
+            <button onclick="openPack('bronze')">
+                ÖFFNEN
+            </button>
+        </div>
+
+        <div class="pack gold">
+            <div class="pack-icon">🥇</div>
+            <h2>Gold Pack</h2>
+            <p>1 Spieler</p>
+            <p>Preis: 750 🪙</p>
+            <button onclick="openPack('gold')">
+                ÖFFNEN
+            </button>
+        </div>
+
+        <div class="pack legend">
+            <div class="pack-icon">💎</div>
+            <h2>Legend Pack</h2>
+            <p>1 Spieler</p>
+            <p>Preis: 1500 🪙</p>
+            <button onclick="openPack('legend')">
+                ÖFFNEN
+            </button>
+        </div>
+
+    </div>
+
+    <div id="result"></div>
+
+    <div class="inventory">
+        <h2>📋 Deine Sammlung</h2>
+        <div class="collection" id="collection"></div>
+    </div>
+
+</div>
+
+<script>
+
+let coins = 5000;
+
+const players = [
+
+    {
+        name: "Luka Modrić",
+        rating: 91,
+        position: "ZM",
+        rarity: "legendary",
+        face: "🇭🇷",
+        pace: 72,
+        shooting: 80,
+        passing: 95,
+        dribbling: 90
+    },
+
+    {
+        name: "Kylian Mbappé",
+        rating: 95,
+        position: "ST",
+        rarity: "legendary",
+        face: "🇫🇷",
+        pace: 97,
+        shooting: 94,
+        passing: 86,
+        dribbling: 96
+    },
+
+    {
+        name: "Erling Haaland",
+        rating: 94,
+        position: "ST",
+        rarity: "epic",
+        face: "🇳🇴",
+        pace: 89,
+        shooting: 97,
+        passing: 75,
+        dribbling: 88
+    },
+
+    {
+        name: "Kevin De Bruyne",
+        rating: 92,
+        position: "ZM",
+        rarity: "epic",
+        face: "🇧🇪",
+        pace: 74,
+        shooting: 88,
+        passing: 97,
+        dribbling: 86
+    },
+
+    {
+        name: "Vinícius Jr.",
+        rating: 91,
+        position: "LF",
+        rarity: "rare",
+        face: "🇧🇷",
+        pace: 95,
+        shooting: 86,
+        passing: 81,
+        dribbling: 94
+    },
+
+    {
+        name: "Jude Bellingham",
+        rating: 90,
+        position: "ZM",
+        rarity: "rare",
+        face: "🏴",
+        pace: 82,
+        shooting: 84,
+        passing: 87,
+        dribbling: 88
+    },
+
+    {
+        name: "Manuel Neuer",
+        rating: 89,
+        position: "TW",
+        rarity: "rare",
+        face: "🇩🇪",
+        pace: 60,
+        shooting: 40,
+        passing: 88,
+        dribbling: 55
+    },
+
+    {
+        name: "Trent Alexander-Arnold",
+        rating: 86,
+        position: "RV",
+        rarity: "common",
+        face: "🏴",
+        pace: 78,
+        shooting: 66,
+        passing: 91,
+        dribbling: 78
+    },
+
+    {
+        name: "Marcus Rashford",
+        rating: 84,
+        position: "LF",
+        rarity: "common",
+        face: "🏴",
+        pace: 89,
+        shooting: 82,
+        passing: 76,
+        dribbling: 83
+    },
+
+    {
+        name: "Pedri",
+        rating: 85,
+        position: "ZM",
+        rarity: "common",
+        face: "🇪🇸",
+        pace: 73,
+        shooting: 67,
+        passing: 92,
+        dribbling: 91
+    },
+
+    {
+        name: "Mike Maignan",
+        rating: 84,
+        position: "TW",
+        rarity: "common",
+        face: "🇫🇷",
+        pace: 55,
+        shooting: 30,
+        passing: 75,
+        dribbling: 35
+    },
+
+    {
+        name: "Rúben Dias",
+        rating: 87,
+        position: "IV",
+        rarity: "rare",
+        face: "🇵🇹",
+        pace: 65,
+        shooting: 45,
+        passing: 82,
+        dribbling: 60
+    }
+
+];
+
+let collection = [];
+
+function updateCoins() {
+    document.getElementById("coins").textContent = coins;
+}
+
+function randomPlayer(packType) {
+
+    let pool = [];
+
+    if (packType === "bronze") {
+        pool = players.filter(p =>
+            p.rarity === "common" || p.rarity === "rare"
+        );
+    }
+
+    if (packType === "gold") {
+        pool = players.filter(p =>
+            p.rarity === "rare" ||
+            p.rarity === "epic" ||
+            p.rarity === "common"
+        );
+    }
+
+    if (packType === "legend") {
+        pool = players;
+    }
+
+    /*
+      Wahrscheinlichkeiten:
+      Legend Pack hat die besten Chancen.
+    */
+
+    let random = Math.random();
+
+    if (packType === "legend") {
+
+        if (random < 0.10) {
+            pool = players.filter(p => p.rarity === "legendary");
+        } else if (random < 0.40) {
+            pool = players.filter(p => p.rarity === "epic");
+        } else if (random < 0.75) {
+            pool = players.filter(p => p.rarity === "rare");
+        } else {
+            pool = players.filter(p => p.rarity === "common");
+        }
+
+    }
+
+    if (packType === "gold") {
+
+        if (random < 0.05) {
+            pool = players.filter(p => p.rarity === "legendary");
+        } else if (random < 0.25) {
+            pool = players.filter(p => p.rarity === "epic");
+        } else if (random < 0.75) {
+            pool = players.filter(p => p.rarity === "rare");
+        } else {
+            pool = players.filter(p => p.rarity === "common");
+        }
+
+    }
+
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function createCard(player) {
+
+    return `
+        <div class="player-card ${player.rarity}">
+            <div class="player-face">${player.face}</div>
+
+            <div class="rating">${player.rating}</div>
+
+            <div class="position">${player.position}</div>
+
+            <div class="name">${player.name}</div>
+
+            <div class="rarity">${player.rarity}</div>
+
+            <div class="stats">
+                <div class="stat">⚡ ${player.pace}</div>
+                <div class="stat">🎯 ${player.shooting}</div>
+                <div class="stat">🎯 ${player.passing}</div>
+                <div class="stat">🕺 ${player.dribbling}</div>
+            </div>
+        </div>
+    `;
+}
+
+function openPack(type) {
+
+    let prices = {
+        bronze: 250,
+        gold: 750,
+        legend: 1500
+    };
+
+    let price = prices[type];
+
+    if (coins < price) {
+        document.getElementById("message").textContent =
+            "❌ Du hast nicht genug Coins!";
+        return;
+    }
+
+    coins -= price;
+    updateCoins();
+
+    let result = document.getElementById("result");
+
+    result.innerHTML = `
+        <div style="font-size:100px" class="shake">
+            📦
+        </div>
+        <h2>Pack wird geöffnet...</h2>
+    `;
+
+    document.getElementById("message").textContent =
+        "✨ Spannung... Was ist drin?";
+
+    setTimeout(() => {
+
+        let amount = type === "bronze" ? 3 : 1;
+
+        let html = "";
+
+        for (let i = 0; i < amount; i++) {
+
+            let player = randomPlayer(type);
+
+            collection.push(player);
+
+            html += createCard(player);
+        }
+
+        result.innerHTML = html;
+
+        let newest = collection[collection.length - amount];
+
+        if (newest.rarity === "legendary") {
+            document.getElementById("message").textContent =
+                "🔥 UNGLAUBLICH! LEGENDÄRER SPIELER!";
+        } else if (newest.rarity === "epic") {
+            document.getElementById("message").textContent =
+                "💜 EPISCH! Was für ein Pull!";
+        } else if (newest.rarity === "rare") {
+            document.getElementById("message").textContent =
+                "🔵 Seltener Spieler gezogen!";
+        } else {
+            document.getElementById("message").textContent =
+                "⚪ Spieler erhalten!";
+        }
+
+        updateCollection();
+
+    }, 1200);
+}
+
+function updateCollection() {
+
+    const collectionElement =
+        document.getElementById("collection");
+
+    collectionElement.innerHTML = "";
+
+    collection.forEach(player => {
+
+        collectionElement.innerHTML += `
+            <div class="small-card">
+                <div class="face">${player.face}</div>
+                <strong>${player.name}</strong>
+                <div>${player.rating} • ${player.position}</div>
+                <small>${player.rarity}</small>
+            </div>
+        `;
+
+    });
+}
+
+updateCoins();
+
+</script>
+
+</body>
+</html>

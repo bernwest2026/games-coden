@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diddy vs Epstein - Fight</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #090909;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    overflow: hidden;
+}
+
+h1 {
+    margin: 15px 0 5px;
+    color: #ffcc00;
+}
+
+#game {
+    width: 1000px;
+    max-width: 95vw;
+    height: 600px;
+    margin: 10px auto;
+    position: relative;
+    overflow: hidden;
+    border: 4px solid #555;
+    border-radius: 15px;
+    background:
+        linear-gradient(#17233b 0%, #283d5c 55%, #151515 55%, #111 100%);
+}
+
+#floor {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 270px;
+    background:
+        repeating-linear-gradient(
+            45deg,
+            #222 0px,
+            #222 30px,
+            #282828 30px,
+            #282828 60px
+        );
+}
+
+.fighter {
+    position: absolute;
+    bottom: 60px;
+    width: 100px;
+    height: 170px;
+    transition: transform .08s;
+}
+
+#p1 {
+    left: 120px;
+}
+
+#p2 {
+    right: 120px;
+}
+
+.head {
+    width: 70px;
+    height: 70px;
+    margin: auto;
+    border-radius: 50%;
+    background: #d49a70;
+    border: 4px solid #111;
+    font-size: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.body {
+    width: 75px;
+    height: 85px;
+    margin: auto;
+    border-radius: 15px 15px 5px 5px;
+    border: 4px solid #111;
+}
+
+#p1 .body {
+    background: #111;
+}
+
+#p2 .body {
+    background: #555;
+}
+
+.legs {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.leg {
+    width: 22px;
+    height: 55px;
+    background: #111;
+    border: 3px solid #000;
+}
+
+.name {
+    position: absolute;
+    top: -35px;
+    width: 150px;
+    left: -25px;
+    font-weight: bold;
+}
+
+.hp-container {
+    position: absolute;
+    top: 20px;
+    width: 380px;
+}
+
+#hp1Box {
+    left: 25px;
+}
+
+#hp2Box {
+    right: 25px;
+}
+
+.hp-bg {
+    height: 30px;
+    background: #333;
+    border: 3px solid white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.hp {
+    height: 100%;
+    background: #16e05b;
+    width: 100%;
+    transition: width .2s;
+}
+
+#hp2 {
+    float: right;
+}
+
+.label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#timer {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 35px;
+    font-weight: bold;
+    color: #ffcc00;
+}
+
+#controls {
+    margin: 10px;
+    color: #bbb;
+}
+
+#message {
+    font-size: 25px;
+    font-weight: bold;
+    height: 35px;
+}
+
+.hit {
+    animation: hit .15s;
+}
+
+@keyframes hit {
+    50% {
+        transform: translateX(20px) rotate(8deg);
+    }
+}
+
+.attack {
+    animation: attack .2s;
+}
+
+@keyframes attack {
+    50% {
+        transform: translateX(35px);
+    }
+}
+
+button {
+    padding: 10px 20px;
+    background: #ffcc00;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #fff;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🥊 DIDDY vs EPSTEIN 🥊</h1>
+
+<div id="message">FIGHT!</div>
+
+<div id="game">
+
+    <div class="hp-container" id="hp1Box">
+        <div class="label">P. Diddy</div>
+        <div class="hp-bg">
+            <div class="hp" id="hp1"></div>
+        </div>
+    </div>
+
+    <div class="hp-container" id="hp2Box">
+        <div class="label">Jeffrey Epstein</div>
+        <div class="hp-bg">
+            <div class="hp" id="hp2"></div>
+        </div>
+    </div>
+
+    <div id="timer">60</div>
+
+    <div id="floor"></div>
+
+    <div class="fighter" id="p1">
+        <div class="name">P. Diddy</div>
+        <div class="head">😎</div>
+        <div class="body"></div>
+        <div class="legs">
+            <div class="leg"></div>
+            <div class="leg"></div>
+        </div>
+    </div>
+
+    <div class="fighter" id="p2">
+        <div class="name">Jeffrey Epstein</div>
+        <div class="head">🕶️</div>
+        <div class="body"></div>
+        <div class="legs">
+            <div class="leg"></div>
+            <div class="leg"></div>
+        </div>
+    </div>
+
+</div>
+
+<div id="controls">
+    <b>P. Diddy:</b>
+    A / D = bewegen |
+    W = springen |
+    F = schlagen |
+    G = Spezialangriff
+    <br><br>
+    <b>Epstein:</b>
+    ← / → = bewegen |
+    ↑ = springen |
+    K = schlagen |
+    L = Spezialangriff
+</div>
+
+<button onclick="restart()">🔄 Neustart</button>
+
+<script>
+
+const p1 = document.getElementById("p1");
+const p2 = document.getElementById("p2");
+
+const hp1bar = document.getElementById("hp1");
+const hp2bar = document.getElementById("hp2");
+
+const message = document.getElementById("message");
+const timerElement = document.getElementById("timer");
+
+let hp1 = 100;
+let hp2 = 100;
+
+let x1 = 120;
+let x2 = 780;
+
+let y1 = 0;
+let y2 = 0;
+
+let gameOver = false;
+let time = 60;
+
+let keys = {};
+
+document.addEventListener("keydown", e => {
+    keys[e.key.toLowerCase()] = true;
+
+    if (["f", "g", "k", "l"].includes(e.key.toLowerCase())) {
+        attack(e.key.toLowerCase());
+    }
+});
+
+document.addEventListener("keyup", e => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+function update() {
+
+    if (gameOver) return;
+
+    // Spieler 1 Bewegung
+    if (keys["a"]) {
+        x1 -= 5;
+    }
+
+    if (keys["d"]) {
+        x1 += 5;
+    }
+
+    // Spieler 2 Bewegung
+    if (keys["arrowleft"]) {
+        x2 -= 5;
+    }
+
+    if (keys["arrowright"]) {
+        x2 += 5;
+    }
+
+    // Grenzen
+    x1 = Math.max(0, Math.min(900, x1));
+    x2 = Math.max(0, Math.min(900, x2));
+
+    p1.style.left = x1 + "px";
+    p2.style.left = x2 + "px";
+
+    // Springen
+    if (keys["w"] && y1 === 0) {
+        y1 = 1;
+    }
+
+    if (keys["arrowup"] && y2 === 0) {
+        y2 = 1;
+    }
+
+    if (y1 > 0) {
+        y1 += 8;
+
+        if (y1 >= 100) {
+            y1 = -100;
+        }
+    }
+
+    if (y1 < 0) {
+        y1 += 8;
+
+        if (y1 >= 0) {
+            y1 = 0;
+        }
+    }
+
+    if (y2 > 0) {
+        y2 += 8;
+
+        if (y2 >= 100) {
+            y2 = -100;
+        }
+    }
+
+    if (y2 < 0) {
+        y2 += 8;
+
+        if (y2 >= 0) {
+            y2 = 0;
+        }
+    }
+
+    p1.style.bottom = (60 + Math.max(0, y1)) + "px";
+    p2.style.bottom = (60 + Math.max(0, y2)) + "px";
+
+    requestAnimationFrame(update);
+}
+
+function attack(key) {
+
+    if (gameOver) return;
+
+    let distance = Math.abs(x1 - x2);
+
+    if (key === "f" && distance < 150) {
+
+        hp2 -= 10;
+        showHit(p2);
+        message.textContent = "💥 P. Diddy trifft!";
+    }
+
+    if (key === "g" && distance < 220) {
+
+        hp2 -= 20;
+        showHit(p2);
+        message.textContent = "🔥 SPEZIALANGRIFF!";
+    }
+
+    if (key === "k" && distance < 150) {
+
+        hp1 -= 10;
+        showHit(p1);
+        message.textContent = "💥 Epstein trifft!";
+    }
+
+    if (key === "l" && distance < 220) {
+
+        hp1 -= 20;
+        showHit(p1);
+        message.textContent = "🔥 SPEZIALANGRIFF!";
+    }
+
+    hp1 = Math.max(0, hp1);
+    hp2 = Math.max(0, hp2);
+
+    hp1bar.style.width = hp1 + "%";
+    hp2bar.style.width = hp2 + "%";
+
+    checkWinner();
+}
+
+function showHit(player) {
+
+    player.classList.remove("hit");
+
+    void player.offsetWidth;
+
+    player.classList.add("hit");
+}
+
+function checkWinner() {
+
+    if (hp1 <= 0) {
+        endGame("🏆 Jeffrey Epstein gewinnt!");
+    }
+
+    if (hp2 <= 0) {
+        endGame("🏆 P. Diddy gewinnt!");
+    }
+}
+
+function endGame(text) {
+
+    gameOver = true;
+    message.textContent = text;
+}
+
+let countdown = setInterval(() => {
+
+    if (gameOver) return;
+
+    time--;
+
+    timerElement.textContent = time;
+
+    if (time <= 0) {
+
+        if (hp1 > hp2) {
+            endGame("🏆 P. Diddy gewinnt nach Punkten!");
+        } else if (hp2 > hp1) {
+            endGame("🏆 Jeffrey Epstein gewinnt nach Punkten!");
+        } else {
+            endGame("🤝 Unentschieden!");
+        }
+    }
+
+}, 1000);
+
+function restart() {
+
+    hp1 = 100;
+    hp2 = 100;
+
+    x1 = 120;
+    x2 = 780;
+
+    time = 60;
+    gameOver = false;
+
+    hp1bar.style.width = "100%";
+    hp2bar.style.width = "100%";
+
+    timerElement.textContent = "60";
+    message.textContent = "FIGHT!";
+
+    p1.style.left = x1 + "px";
+    p2.style.left = x2 + "px";
+}
+
+update();
+
+</script>
+
+</body>
+</html>
