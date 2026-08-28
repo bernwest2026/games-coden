@@ -1,0 +1,211 @@
+```html
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    h1 {
+      color: #22c55e;
+    }
+
+    #score {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    canvas {
+      background: #222;
+      border: 3px solid #22c55e;
+      max-width: 90vw;
+      height: auto;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #22c55e;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #16a34a;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🐍 Snake</h1>
+
+  <div id="score">Punkte: 0</div>
+
+  <canvas id="game" width="400" height="400"></canvas>
+
+  <br>
+
+  <button onclick="startGame()">Neues Spiel</button>
+
+  <p>Steuerung: ⬆️ ⬇️ ⬅️ ➡️</p>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const grid = 20;
+    const size = canvas.width / grid;
+
+    let snake;
+    let food;
+    let direction;
+    let nextDirection;
+    let score;
+    let gameLoop;
+
+    function startGame() {
+      snake = [
+        { x: 10, y: 10 },
+        { x: 9, y: 10 },
+        { x: 8, y: 10 }
+      ];
+
+      direction = { x: 1, y: 0 };
+      nextDirection = direction;
+      score = 0;
+
+      document.getElementById("score").textContent =
+        "Punkte: " + score;
+
+      placeFood();
+
+      clearInterval(gameLoop);
+      gameLoop = setInterval(update, 100);
+    }
+
+    function placeFood() {
+      do {
+        food = {
+          x: Math.floor(Math.random() * size),
+          y: Math.floor(Math.random() * size)
+        };
+      } while (
+        snake.some(part => part.x === food.x && part.y === food.y)
+      );
+    }
+
+    function update() {
+      direction = nextDirection;
+
+      const head = {
+        x: snake[0].x + direction.x,
+        y: snake[0].y + direction.y
+      };
+
+      // Wand berührt
+      if (
+        head.x < 0 ||
+        head.x >= size ||
+        head.y < 0 ||
+        head.y >= size
+      ) {
+        gameOver();
+        return;
+      }
+
+      // Sich selbst berührt
+      if (
+        snake.some(part => part.x === head.x && part.y === head.y)
+      ) {
+        gameOver();
+        return;
+      }
+
+      snake.unshift(head);
+
+      // Apfel gegessen
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+
+        document.getElementById("score").textContent =
+          "Punkte: " + score;
+
+        placeFood();
+      } else {
+        snake.pop();
+      }
+
+      draw();
+    }
+
+    function draw() {
+      ctx.fillStyle = "#222";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Apfel
+      ctx.fillStyle = "#ef4444";
+      ctx.fillRect(
+        food.x * grid,
+        food.y * grid,
+        grid - 2,
+        grid - 2
+      );
+
+      // Schlange
+      snake.forEach((part, index) => {
+        ctx.fillStyle = index === 0 ? "#86efac" : "#22c55e";
+
+        ctx.fillRect(
+          part.x * grid,
+          part.y * grid,
+          grid - 2,
+          grid - 2
+        );
+      });
+    }
+
+    function gameOver() {
+      clearInterval(gameLoop);
+
+      setTimeout(() => {
+        alert("Game Over! 🐍\nPunkte: " + score);
+      }, 50);
+    }
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "ArrowUp" && direction.y !== 1) {
+        nextDirection = { x: 0, y: -1 };
+      }
+
+      if (event.key === "ArrowDown" && direction.y !== -1) {
+        nextDirection = { x: 0, y: 1 };
+      }
+
+      if (event.key === "ArrowLeft" && direction.x !== 1) {
+        nextDirection = { x: -1, y: 0 };
+      }
+
+      if (event.key === "ArrowRight" && direction.x !== -1) {
+        nextDirection = { x: 1, y: 0 };
+      }
+    });
+
+    startGame();
+  </script>
+
+</body>
+</html>
+```
