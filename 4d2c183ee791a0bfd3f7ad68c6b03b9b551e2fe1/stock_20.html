@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>STOCK 20 — Horror</title>
+
+<style>
+*{box-sizing:border-box}
+
+html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#000;
+    color:#eee;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    user-select:none;
+}
+
+#game{
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    background:#050606;
+}
+
+/* =====================================================
+   3D-SZENE
+===================================================== */
+
+#scene{
+    position:absolute;
+    inset:0;
+    perspective:900px;
+    overflow:hidden;
+    background:#070909;
+}
+
+#camera{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:0;
+    height:0;
+    transform-style:preserve-3d;
+}
+
+.room{
+    position:absolute;
+    transform-style:preserve-3d;
+}
+
+/* Boden */
+
+.floor{
+    position:absolute;
+    width:1800px;
+    height:1400px;
+    left:-900px;
+    top:-700px;
+
+    background:
+        repeating-linear-gradient(
+            90deg,
+            #171918 0 95px,
+            #101212 96px 99px
+        ),
+        repeating-linear-gradient(
+            0deg,
+            transparent 0 95px,
+            rgba(0,0,0,.3) 96px 99px
+        );
+
+    transform:
+        rotateX(90deg)
+        translateZ(-250px);
+
+    transform-origin:center;
+}
+
+/* Decke */
+
+.ceiling{
+    position:absolute;
+    width:1800px;
+    height:1400px;
+    left:-900px;
+    top:-700px;
+
+    background:#121515;
+
+    transform:
+        rotateX(90deg)
+        translateZ(250px);
+}
+
+/* Wände */
+
+.wall{
+    position:absolute;
+    background:
+        linear-gradient(
+            90deg,
+            #101313,
+            #242827,
+            #111414
+        );
+
+    box-shadow:
+        inset 0 0 100px #000;
+}
+
+/*
+    Koordinatensystem:
+    X = links/rechts
+    Z = vorne/hinten
+*/
+
+.wall.back{
+    width:1800px;
+    height:500px;
+    left:-900px;
+    top:-250px;
+
+    transform:
+        translate3d(0,0,-700px);
+}
+
+.wall.front{
+    width:1800px;
+    height:500px;
+    left:-900px;
+    top:-250px;
+
+    transform:
+        translate3d(0,0,700px);
+}
+
+.wall.left{
+    width:1400px;
+    height:500px;
+    left:-700px;
+    top:-250px;
+
+    transform:
+        rotateY(90deg)
+        translateZ(900px);
+}
+
+.wall.right{
+    width:1400px;
+    height:500px;
+    left:-700px;
+    top:-250px;
+
+    transform:
+        rotateY(90deg)
+        translateZ(-900px);
+}
+
+/* =====================================================
+   OBJEKTE
+===================================================== */
+
+.object{
+    position:absolute;
+    transform-style:preserve-3d;
+}
+
+/* Tisch */
+
+.table{
+    width:260px;
+    height:110px;
+
+    background:
+        linear-gradient(#332b25,#171311);
+
+    box-shadow:
+        0 20px 30px #000;
+
+    transform:
+        translate3d(-600px,120px,-350px);
+}
+
+.table:before,
+.table:after{
+    content:"";
+    position:absolute;
+    width:25px;
+    height:150px;
+    background:#171311;
+    top:100px;
+}
+
+.table:before{left:25px}
+.table:after{right:25px}
+
+/* Telefon */
+
+.phone{
+    position:absolute;
+
+    width:85px;
+    height:45px;
+
+    left:-510px;
+    top:75px;
+
+    background:
+        linear-gradient(135deg,#111,#303030,#090909);
+
+    border:2px solid #444;
+    border-radius:7px;
+
+    transform:
+        translate3d(0,0,-350px)
+        rotateX(5deg);
+
+    box-shadow:
+        0 5px 10px #000;
+}
+
+.phone-screen{
+    position:absolute;
+    left:10px;
+    top:7px;
+
+    width:62px;
+    height:23px;
+
+    background:#263b34;
+
+    color:#a9d8bb;
+    font-size:7px;
+
+    text-align:center;
+    padding-top:7px;
+
+    box-shadow:
+        inset 0 0 8px #000;
+}
+
+.phone-led{
+    position:absolute;
+    right:6px;
+    bottom:6px;
+
+    width:5px;
+    height:5px;
+
+    border-radius:50%;
+    background:#aaffdd;
+
+    box-shadow:
+        0 0 10px #aff;
+}
+
+/* Sicherungskasten */
+
+.fusebox{
+    position:absolute;
+
+    width:80px;
+    height:120px;
+
+    left:700px;
+    top:-100px;
+
+    background:#292b28;
+
+    border:5px solid #111;
+
+    transform:
+        translate3d(0,0,-690px);
+
+    box-shadow:
+        0 0 20px #000;
+}
+
+.fusebox-title{
+    text-align:center;
+    color:#777;
+    font-size:7px;
+    margin-top:8px;
+}
+
+.fuse{
+    position:absolute;
+
+    width:14px;
+    height:30px;
+
+    background:#666;
+    border:2px solid #222;
+}
+
+.fuse:nth-child(2){
+    left:10px;
+    top:45px;
+}
+
+.fuse:nth-child(3){
+    left:32px;
+    top:45px;
+}
+
+.fuse:nth-child(4){
+    left:54px;
+    top:45px;
+}
+
+.fuse.off{
+    background:#111;
+}
+
+/* Fenster */
+
+.window{
+    position:absolute;
+
+    width:340px;
+    height:270px;
+
+    left:-170px;
+    top:-135px;
+
+    background:
+        linear-gradient(
+            #02060b,
+            #152638 60%,
+            #030405
+        );
+
+    border:12px solid #303333;
+
+    transform:
+        translate3d(0,0,-695px);
+
+    box-shadow:
+        0 0 40px #000,
+        inset 0 0 30px #000;
+}
+
+.window:before{
+    content:"";
+
+    position:absolute;
+
+    width:5px;
+    height:100%;
+
+    left:50%;
+
+    background:#303333;
+}
+
+.city{
+    position:absolute;
+
+    bottom:0;
+    width:100%;
+    height:90px;
+
+    opacity:.5;
+
+    background:
+        repeating-linear-gradient(
+            90deg,
+            transparent 0 15px,
+            #c09c4d 16px 19px,
+            transparent 20px 35px
+        );
+}
+
+/* Tür */
+
+.door{
+    position:absolute;
+
+    width:180px;
+    height:370px;
+
+    left:-90px;
+    top:-185px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #101111,
+            #2b2b29,
+            #101111
+        );
+
+    border:9px solid #343534;
+
+    transform:
+        translate3d(0,0,690px);
+
+    box-shadow:
+        0 0 40px #000;
+}
+
+.handle{
+    position:absolute;
+
+    right:18px;
+    top:185px;
+
+    width:13px;
+    height:13px;
+
+    border-radius:50%;
+
+    background:#b5a778;
+}
+
+/* Schlüssel */
+
+.key{
+    position:absolute;
+
+    width:70px;
+    height:25px;
+
+    left:-400px;
+    top:60px;
+
+    opacity:0;
+
+    transform:
+        translate3d(0,0,-350px)
+        rotateZ(-20deg);
+}
+
+.key.visible{
+    opacity:1;
+}
+
+.key-ring{
+    position:absolute;
+
+    width:20px;
+    height:20px;
+
+    border:4px solid #c0a96a;
+    border-radius:50%;
+}
+
+.key-body{
+    position:absolute;
+
+    left:18px;
+    top:8px;
+
+    width:45px;
+    height:5px;
+
+    background:#c0a96a;
+}
+
+.key-tip{
+    position:absolute;
+
+    right:0;
+    top:3px;
+
+    width:10px;
+    height:14px;
+
+    border-right:4px solid #c0a96a;
+    border-bottom:4px solid #c0a96a;
+}
+
+/* Lampe */
+
+.lamp{
+    position:absolute;
+
+    width:20px;
+    height:130px;
+
+    left:-500px;
+    top:-10px;
+
+    background:#161616;
+
+    transform:
+        translate3d(0,0,-350px);
+}
+
+.lamp:before{
+    content:"";
+
+    position:absolute;
+
+    width:90px;
+    height:55px;
+
+    left:-35px;
+    top:-35px;
+
+    border-radius:50%;
+
+    background:#c1ae7a;
+
+    box-shadow:
+        0 0 100px 40px rgba(190,165,100,.2);
+}
+
+/* =====================================================
+   MONSTER
+===================================================== */
+
+#monster{
+    position:absolute;
+
+    width:170px;
+    height:350px;
+
+    left:50%;
+    top:50%;
+
+    transform:
+        translate(-50%,-50%)
+        scale(.2);
+
+    opacity:0;
+
+    z-index:40;
+
+    pointer-events:none;
+}
+
+.monster-head{
+    width:115px;
+    height:140px;
+
+    margin:auto;
+
+    background:#030404;
+
+    border-radius:
+        50% 50% 45% 45%;
+
+    box-shadow:
+        0 0 40px #000;
+}
+
+.eye{
+    position:absolute;
+
+    top:62px;
+
+    width:17px;
+    height:7px;
+
+    background:#eee;
+
+    box-shadow:
+        0 0 15px white;
+}
+
+.eye.one{left:40px}
+.eye.two{right:40px}
+
+.monster-body{
+    width:150px;
+    height:220px;
+
+    margin:-5px auto;
+
+    background:#030404;
+
+    border-radius:
+        50% 50% 10% 10%;
+}
+
+/* =====================================================
+   HUD
+===================================================== */
+
+#hud{
+    position:absolute;
+
+    left:20px;
+    top:20px;
+
+    z-index:60;
+
+    width:350px;
+
+    text-shadow:
+        0 2px 6px #000;
+}
+
+#floor{
+    font-size:23px;
+    letter-spacing:6px;
+}
+
+#objective-box{
+    margin-top:15px;
+
+    padding:13px 16px;
+
+    background:
+        rgba(0,0,0,.75);
+
+    border-left:
+        3px solid #aaa;
+}
+
+#objective-title{
+    font-size:10px;
+    letter-spacing:3px;
+    color:#888;
+}
+
+#objective{
+    margin-top:7px;
+
+    font-size:15px;
+    line-height:1.4;
+}
+
+#hint{
+    margin-top:7px;
+
+    color:#aaa;
+
+    font-size:12px;
+}
+
+/* =====================================================
+   CROSSHAIR
+===================================================== */
+
+#crosshair{
+    position:absolute;
+
+    left:50%;
+    top:50%;
+
+    width:12px;
+    height:12px;
+
+    transform:
+        translate(-50%,-50%);
+
+    z-index:70;
+}
+
+#crosshair:before,
+#crosshair:after{
+    content:"";
+
+    position:absolute;
+
+    background:#ddd;
+}
+
+#crosshair:before{
+    width:12px;
+    height:1px;
+    top:5px;
+}
+
+#crosshair:after{
+    width:1px;
+    height:12px;
+    left:5px;
+}
+
+/* =====================================================
+   INTERAKTION
+===================================================== */
+
+#interaction{
+    position:absolute;
+
+    left:50%;
+    bottom:100px;
+
+    transform:
+        translateX(-50%);
+
+    z-index:70;
+
+    padding:12px 20px;
+
+    background:
+        rgba(0,0,0,.85);
+
+    border:1px solid #555;
+
+    font-size:13px;
+
+    display:none;
+}
+
+/* =====================================================
+   DIALOG
+===================================================== */
+
+#dialogue{
+    position:absolute;
+
+    left:50%;
+    bottom:25px;
+
+    transform:
+        translateX(-50%);
+
+    width:min(720px,90vw);
+
+    padding:18px 22px;
+
+    background:
+        rgba(0,0,0,.88);
+
+    border:1px solid #333;
+
+    z-index:80;
+
+    display:none;
+}
+
+#speaker{
+    color:#888;
+
+    font-size:10px;
+
+    letter-spacing:3px;
+
+    margin-bottom:8px;
+}
+
+#message{
+    line-height:1.5;
+}
+
+/* =====================================================
+   VIGNETTE
+===================================================== */
+
+#vignette{
+    position:absolute;
+
+    inset:0;
+
+    pointer-events:none;
+
+    z-index:50;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            transparent 30%,
+            rgba(0,0,0,.35) 65%,
+            rgba(0,0,0,.95) 100%
+        );
+}
+
+/* =====================================================
+   START
+===================================================== */
+
+#start{
+    position:absolute;
+
+    inset:0;
+
+    z-index:100;
+
+    background:
+        radial-gradient(
+            circle,
+            #1a1d1d,
+            #000 75%
+        );
+
+    display:flex;
+
+    align-items:center;
+    justify-content:center;
+
+    flex-direction:column;
+
+    text-align:center;
+}
+
+#start h1{
+    font-size:58px;
+
+    font-weight:300;
+
+    letter-spacing:14px;
+
+    margin:0;
+}
+
+#start p{
+    max-width:600px;
+
+    color:#777;
+
+    line-height:1.6;
+}
+
+button{
+    margin-top:25px;
+
+    padding:14px 35px;
+
+    color:#ddd;
+
+    background:#111;
+
+    border:1px solid #555;
+
+    cursor:pointer;
+
+    letter-spacing:3px;
+}
+
+button:hover{
+    background:#292929;
+}
+
+/* =====================================================
+   ENDE
+===================================================== */
+
+#end{
+    position:absolute;
+
+    inset:0;
+
+    z-index:150;
+
+    background:#000;
+
+    display:none;
+
+    align-items:center;
+    justify-content:center;
+
+    flex-direction:column;
+
+    text-align:center;
+}
+
+#end h2{
+    font-weight:300;
+
+    letter-spacing:7px;
+}
+
+#end p{
+    max-width:600px;
+
+    color:#777;
+
+    line-height:1.6;
+}
+</style>
+</head>
+
+
+<body>
+
+<div id="game">
+
+    <div id="scene">
+        <div id="camera">
+
+            <div class="room">
+
+                <div class="floor"></div>
+                <div class="ceiling"></div>
+
+                <div class="wall back"></div>
+                <div class="wall front"></div>
+                <div class="wall left"></div>
+                <div class="wall right"></div>
+
+                <!-- Fenster -->
+                <div class="window">
+                    <div class="city"></div>
+                </div>
+
+                <!-- Tisch -->
+                <div class="table"></div>
+
+                <!-- Telefon -->
+                <div class="phone">
+                    <div class="phone-screen">
+                        1 NEUE NACHRICHT
+                    </div>
+
+                    <div class="phone-led"></div>
+                </div>
+
+                <!-- Sicherungskasten -->
+                <div class="fusebox">
+
+                    <div class="fusebox-title">
+                        ELEKTRIK
+                    </div>
+
+                    <div class="fuse"></div>
+                    <div class="fuse"></div>
+                    <div class="fuse"></div>
+
+                </div>
+
+                <!-- Lampe -->
+                <div class="lamp"></div>
+
+                <!-- Schlüssel -->
+                <div class="key">
+
+                    <div class="key-ring"></div>
+                    <div class="key-body"></div>
+                    <div class="key-tip"></div>
+
+                </div>
+
+                <!-- Tür -->
+                <div class="door">
+
+                    <div class="handle"></div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- HUD -->
+
+    <div id="hud">
+
+        <div id="floor">
+            STOCK 20
+        </div>
+
+        <div id="objective-box">
+
+            <div id="objective-title">
+                AKTUELLES ZIEL
+            </div>
+
+            <div id="objective">
+                Untersuche die Wohnung.
+            </div>
+
+            <div id="hint">
+                Bewege dich mit WASD.
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div id="crosshair"></div>
+
+    <div id="interaction"></div>
+
+
+    <div id="dialogue">
+
+        <div id="speaker">
+            NOVA
+        </div>
+
+        <div id="message"></div>
+
+    </div>
+
+
+    <!-- Monster -->
+
+    <div id="monster">
+
+        <div class="monster-head">
+
+            <div class="eye one"></div>
+            <div class="eye two"></div>
+
+        </div>
+
+        <div class="monster-body"></div>
+
+    </div>
+
+
+    <div id="vignette"></div>
+
+
+    <!-- START -->
+
+    <div id="start">
+
+        <h1>STOCK 20</h1>
+
+        <p>
+            Du wachst in einer fremden Wohnung auf.
+            Die Tür ist verschlossen.
+            Draußen befindet sich der zwanzigste Stock.
+        </p>
+
+        <p>
+            Eine künstliche Stimme kennt deinen Namen.
+        </p>
+
+        <button id="startButton">
+            BETRETEN
+        </button>
+
+        <small style="color:#555;margin-top:20px">
+            WASD · Maus · Shift · E · F
+        </small>
+
+    </div>
+
+
+    <!-- ENDE -->
+
+    <div id="end">
+
+        <h2>
+            DU HAST DEN 20. STOCK VERLASSEN
+        </h2>
+
+        <p>
+            Du rennst in den Flur.
+            Hinter dir schließt sich die Tür.
+            Dein Telefon klingelt.
+        </p>
+
+        <button onclick="location.reload()">
+            NOCH EINMAL
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   SPIELZUSTAND
+===================================================== */
+
+const state={
+
+    started:false,
+
+    x:0,
+    z:0,
+
+    rotation:0,
+
+    speed:3,
+
+    phoneRead:false,
+
+    powerOff:false,
+
+    keyFound:false,
+
+    doorUnlocked:false,
+
+    monster:false,
+
+    finished:false
+
+};
+
+
+/* =====================================================
+   AUDIO
+===================================================== */
+
+let audio;
+
+function initAudio(){
+
+    if(!audio){
+
+        audio =
+            new (
+                window.AudioContext ||
+                window.webkitAudioContext
+            )();
+
+    }
+
+}
+
+function sound(
+    frequency=100,
+    duration=.15,
+    type="sine",
+    volume=.04
+){
+
+    if(!audio)return;
+
+    const osc=
+        audio.createOscillator();
+
+    const gain=
+        audio.createGain();
+
+    osc.type=type;
+    osc.frequency.value=frequency;
+
+    gain.gain.value=volume;
+
+    osc.connect(gain);
+    gain.connect(audio.destination);
+
+    osc.start();
+
+    gain.gain.exponentialRampToValueAtTime(
+        .001,
+        audio.currentTime+duration
+    );
+
+    osc.stop(
+        audio.currentTime+duration
+    );
+
+}
+
+
+/* =====================================================
+   DIALOG
+===================================================== */
+
+function say(text,who="NOVA",duration=4000){
+
+    document
+        .getElementById("speaker")
+        .textContent=who;
+
+    document
+        .getElementById("message")
+        .textContent=text;
+
+    document
+        .getElementById("dialogue")
+        .style.display="block";
+
+    clearTimeout(window.dialogTimer);
+
+    window.dialogTimer=setTimeout(()=>{
+
+        document
+            .getElementById("dialogue")
+            .style.display="none";
+
+    },duration);
+
+}
+
+
+/* =====================================================
+   ZIEL
+===================================================== */
+
+function goal(title,hintText){
+
+    document
+        .getElementById("objective")
+        .textContent=title;
+
+    document
+        .getElementById("hint")
+        .textContent=hintText;
+
+}
+
+
+/* =====================================================
+   START
+===================================================== */
+
+document
+    .getElementById("startButton")
+    .onclick=()=>{
+
+        initAudio();
+
+        document
+            .getElementById("start")
+            .style.display="none";
+
+        state.started=true;
+
+        goal(
+            "Untersuche die Wohnung.",
+            "Laufe mit WASD herum. Suche nach etwas Auffälligem."
+        );
+
+        setTimeout(()=>{
+
+            say(
+                "Du bist wach.",
+                "NOVA"
+            );
+
+        },700);
+
+        setTimeout(()=>{
+
+            say(
+                "Das Telefon auf dem Tisch könnte dir helfen.",
+                "NOVA"
+            );
+
+        },3500);
+
+    };
+
+
+/* =====================================================
+   WASD
+===================================================== */
+
+const keys={};
+
+document.addEventListener(
+    "keydown",
+    e=>{
+
+        keys[e.key.toLowerCase()]=true;
+
+        if(e.key.toLowerCase()==="e"){
+            interact();
+        }
+
+        if(e.key.toLowerCase()==="f"){
+            flashlight();
+        }
+
+    }
+);
+
+document.addEventListener(
+    "keyup",
+    e=>{
+        keys[e.key.toLowerCase()]=false;
+    }
+);
+
+
+/* =====================================================
+   MAUS-LOOK
+===================================================== */
+
+let yaw=0;
+let pitch=0;
+
+document.addEventListener(
+    "mousemove",
+    e=>{
+
+        if(!state.started ||
+           state.finished)return;
+
+        yaw-=e.movementX*.15;
+        pitch-=e.movementY*.08;
+
+        pitch=
+            Math.max(
+                -55,
+                Math.min(55,pitch)
+            );
+
+    }
+);
+
+
+/* =====================================================
+   TASTENSTEUERUNG
+===================================================== */
+
+function updateMovement(){
+
+    if(!state.started ||
+       state.finished)return;
+
+    let dx=0;
+    let dz=0;
+
+    if(keys["w"])dz-=1;
+    if(keys["s"])dz+=1;
+    if(keys["a"])dx-=1;
+    if(keys["d"])dx+=1;
+
+    if(dx===0 && dz===0)return;
+
+    const length=
+        Math.sqrt(dx*dx+dz*dz);
+
+    dx/=length;
+    dz/=length;
+
+    let speed=
+        keys["shift"] ? 6 : 3;
+
+    /*
+       Bewegung relativ zur Blickrichtung
+    */
+
+    const angle=
+        yaw*Math.PI/180;
+
+    const moveX=
+        dx*Math.cos(angle)
+        -
+        dz*Math.sin(angle);
+
+    const moveZ=
+        dx*Math.sin(angle)
+        +
+        dz*Math.cos(angle);
+
+    const nextX=
+        state.x+moveX*speed;
+
+    const nextZ=
+        state.z+moveZ*speed;
+
+    if(!collision(nextX,nextZ)){
+
+        state.x=nextX;
+        state.z=nextZ;
+
+    }
+
+}
+
+
+/* =====================================================
+   KOLLISIONEN
+===================================================== */
+function collision(x, z){
+
+    // Grenzen der Wohnung
+    const wallThickness = 55;
+
+    // Linke Wand
+    if(x < -845 + wallThickness){
+        return true;
+    }
+
+    // Rechte Wand
+    if(x > 845 - wallThickness){
+        return true;
+    }
+
+    // Hintere Wand
+    if(z < -645 + wallThickness){
+        return true;
+    }
+
+    // Vordere Wand
+    // Bereich der Eingangstür bleibt als Durchgang frei
+    if(z > 645 - wallThickness){
+
+        // Tür befindet sich ungefähr in der Mitte
+        if(Math.abs(x) > 120){
+            return true;
+        }
+    }
+
+    // Tisch blockieren
+    if(
+        x > -670 &&
+        x < -330 &&
+        z > -430 &&
+        z < -250
+    ){
+        return true;
+    }
+
+    return false;
+}
+
+
+
+/* =====================================================
+   KAMERA
+===================================================== */
+
+function updateCamera(){
+
+    const camera=
+        document.getElementById("camera");
+
+    camera.style.transform=
+        `
+        translate3d(
+            ${-state.x}px,
+            ${-80}px,
+            ${-state.z}px
+        )
+        rotateX(${pitch}deg)
+        rotateY(${yaw}deg)
+        `;
+
+}
+
+
+/* =====================================================
+   INTERAKTIONSBEREICHE
+===================================================== */
+
+function distance(x1,z1,x2,z2){
+
+    return Math.sqrt(
+        (x1-x2)**2+
+        (z1-z2)**2
+    );
+
+}
+
+
+function getInteraction(){
+
+    /*
+       Telefon:
+       Weltposition ungefähr -510,-350
+    */
+
+    const phoneDistance=
+        distance(
+            state.x,
+            state.z,
+            -510,
+            -350
+        );
+
+    if(
+        phoneDistance<170 &&
+        !state.phoneRead
+    ){
+
+        return "E  ·  TELEFON UNTERSUCHEN";
+
+    }
+
+
+    /*
+       Sicherungskasten
+    */
+
+    const fuseDistance=
+        distance(
+            state.x,
+            state.z,
+            700,
+            -690
+        );
+
+    if(
+        fuseDistance<190 &&
+        state.phoneRead &&
+        !state.powerOff
+    ){
+
+        return "E  ·  SICHERUNGSKASTEN ÖFFNEN";
+
+    }
+
+
+    /*
+       Schlüssel
+    */
+
+    const keyDistance=
+        distance(
+            state.x,
+            state.z,
+            -400,
+            -350
+        );
+
+    if(
+        keyDistance<150 &&
+        state.powerOff &&
+        !state.keyFound
+    ){
+
+        return "E  ·  SCHLÜSSEL NEHMEN";
+
+    }
+
+
+    /*
+       Tür
+    */
+
+    const doorDistance=
+        distance(
+            state.x,
+            state.z,
+            0,
+            690
+        );
+
+    if(
+        doorDistance<220 &&
+        state.doorUnlocked
+    ){
+
+        return "E  ·  TÜR ÖFFNEN";
+
+    }
+
+
+    return null;
+
+}
+
+
+/* =====================================================
+   INTERAKTION
+===================================================== */
+
+function interact(){
+
+    if(!state.started ||
+       state.finished)return;
+
+
+    const phoneDistance=
+        distance(
+            state.x,
+            state.z,
+            -510,
+            -350
+        );
+
+
+    if(
+        phoneDistance<170 &&
+        !state.phoneRead
+    ){
+
+        state.phoneRead=true;
+
+        goal(
+            "Finde den Sicherungskasten.",
+            "Er befindet sich an der hinteren rechten Wand."
+        );
+
+        say(
+            "Eine Nachricht. Sie ist von NOVA.",
+            "DU"
+        );
+
+        setTimeout(()=>{
+
+            say(
+                "SCHALTE DEN STROM NICHT AUS.",
+                "TELEFON"
+            );
+
+        },2200);
+
+        setTimeout(()=>{
+
+            say(
+                "Ich würde dieser Nachricht nicht vertrauen.",
+                "NOVA"
+            );
+
+        },5000);
+
+        return;
+
+    }
+
+
+    const fuseDistance=
+        distance(
+            state.x,
+            state.z,
+            700,
+            -690
+        );
+
+
+    if(
+        fuseDistance<190 &&
+        state.phoneRead &&
+        !state.powerOff
+    ){
+
+        state.powerOff=true;
+
+        document
+            .querySelectorAll(".fuse")
+            .forEach(f=>{
+                f.classList.add("off");
+            });
+
+        document
+            .querySelector(".lamp")
+            .style.opacity=".1";
+
+        goal(
+            "Finde den Schlüssel.",
+            "Der Schlüssel ist jetzt auf dem Tisch."
+        );
+
+        document
+            .querySelector(".key")
+            .classList.add("visible");
+
+        sound(
+            40,
+            .8,
+            "sawtooth",
+            .08
+        );
+
+        say(
+            "Warum hast du das getan?",
+            "NOVA"
+        );
+
+        return;
+
+    }
+
+
+    const keyDistance=
+        distance(
+            state.x,
+            state.z,
+            -400,
+            -350
+        );
+
+
+    if(
+        keyDistance<150 &&
+        state.powerOff &&
+        !state.keyFound
+    ){
+
+        state.keyFound=true;
+
+        document
+            .querySelector(".key")
+            .style.opacity="0";
+
+        goal(
+            "Gehe zur Eingangstür.",
+            "Du hast einen Schlüssel gefunden. Jetzt kannst du fliehen."
+        );
+
+        say(
+            "Der Schlüssel passt wahrscheinlich zur Eingangstür.",
+            "DU"
+        );
+
+        setTimeout(()=>{
+
+            activateMonster();
+
+        },3500);
+
+        return;
+
+    }
+
+
+    const doorDistance=
+        distance(
+            state.x,
+            state.z,
+            0,
+            690
+        );
+
+
+    if(
+        doorDistance<220 &&
+        state.doorUnlocked
+    ){
+
+        finish();
+
+    }
+
+}
+
+
+/* =====================================================
+   MONSTER
+===================================================== */
+
+function activateMonster(){
+
+    state.monster=true;
+
+    goal(
+        "LAUF ZUR EINGANGSTÜR!",
+        "Das Ding ist hinter dir. Benutze WASD + SHIFT."
+    );
+
+    say(
+        "Lauf.",
+        "NOVA"
+    );
+
+    setTimeout(()=>{
+
+        showMonster();
+
+    },1500);
+
+}
+
+
+function showMonster(){
+
+    const monster=
+        document.getElementById("monster");
+
+    monster.style.opacity="1";
+
+    monster.style.transform=
+        "translate(-50%,-50%) scale(1)";
+
+    sound(
+        35,
+        .9,
+        "sawtooth",
+        .12
+    );
+
+    setTimeout(()=>{
+
+        monster.style.opacity="0";
+
+    },900);
+
+}
+
+
+/* =====================================================
+   TÜR FREISCHALTEN
+===================================================== */
+
+function checkDoor(){
+
+    if(
+        state.keyFound &&
+        !state.doorUnlocked
+    ){
+
+        /*
+           Sobald der Spieler den Schlüssel hat,
+           ist die Tür offen.
+        */
+
+        state.doorUnlocked=true;
+
+    }
+
+}
+
+
+/* =====================================================
+   TASCHENLAMPE
+===================================================== */
+
+function flashlight(){
+
+    const scene=
+        document.getElementById("scene");
+
+    if(
+        scene.style.filter===
+        "brightness(0.3)"
+    ){
+
+        scene.style.filter=
+            "brightness(1)";
+
+    }else{
+
+        scene.style.filter=
+            "brightness(.3)";
+
+    }
+
+}
+
+
+/* =====================================================
+   ENDE
+===================================================== */
+
+function finish(){
+
+    state.finished=true;
+
+    document
+        .getElementById("end")
+        .style.display="flex";
+
+    sound(
+        35,
+        1.5,
+        "sine",
+        .08
+    );
+
+}
+
+
+/* =====================================================
+   HUD UPDATE
+===================================================== */
+
+function updateHUD(){
+
+    const text=
+        getInteraction();
+
+    const box=
+        document.getElementById("interaction");
+
+    if(text){
+
+        box.textContent=text;
+        box.style.display="block";
+
+    }else{
+
+        box.style.display="none";
+
+    }
+
+}
+
+
+/* =====================================================
+   HAUPTSCHLEIFE
+===================================================== */
+
+function loop(){
+
+    requestAnimationFrame(loop);
+
+    if(!state.started)return;
+
+    updateMovement();
+    checkDoor();
+    updateCamera();
+    updateHUD();
+
+}
+
+loop();
+
+</script>
+
+</body>
+</html>
