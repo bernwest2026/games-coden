@@ -1,0 +1,2322 @@
+<!DOCTYPE html> <html lang="de"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width,initial-scale=1.0"> <title>Mini Battle Arena - WebGL FPS</title> <style> * { box-sizing: border-box; }
+
+html, body {
+margin: 0;
+width: 100%;
+height: 100%;
+overflow: hidden;
+background: #111;
+font-family: Arial, sans-serif;
+color: white;
+}
+
+canvas {
+position: fixed;
+inset: 0;
+width: 100%;
+height: 100%;
+display: block;
+}
+
+#crosshair {
+position: fixed;
+left: 50%;
+top: 50%;
+width: 22px;
+height: 22px;
+transform: translate(-50%, -50%);
+pointer-events: none;
+z-index: 10;
+}
+
+#crosshair::before,
+#crosshair::after {
+content: "";
+position: absolute;
+background: white;
+box-shadow:
+0 0 3px black,
+0 0 6px rgba(0,0,0,.7);
+}
+
+#crosshair::before {
+width: 22px;
+height: 2px;
+left: 0;
+top: 10px;
+}
+
+#crosshair::after {
+width: 2px;
+height: 22px;
+left: 10px;
+top: 0;
+}
+
+#hud {
+position: fixed;
+inset: 0;
+pointer-events: none;
+z-index: 5;
+}
+
+#healthBox {
+position: absolute;
+left: 20px;
+top: 20px;
+width: 260px;
+}
+
+#healthOuter {
+height: 24px;
+background: rgba(0,0,0,.6);
+border: 2px solid white;
+}
+
+#health {
+height: 100%;
+width: 100%;
+background: #32df57;
+}
+
+#healthText {
+margin-top: 5px;
+font-size: 17px;
+font-weight: bold;
+text-shadow: 2px 2px 3px #000;
+}
+
+#weaponBox {
+position: absolute;
+right: 20px;
+bottom: 20px;
+padding: 14px 18px;
+min-width: 260px;
+text-align: right;
+background: rgba(0,0,0,.6);
+border: 1px solid rgba(255,255,255,.5);
+border-radius: 8px;
+}
+
+#weaponName {
+font-size: 23px;
+font-weight: bold;
+}
+
+#ammo {
+font-size: 32px;
+font-weight: bold;
+margin-top: 3px;
+}
+
+#weaponHelp {
+margin-top: 6px;
+font-size: 13px;
+opacity: .8;
+}
+
+#enemyCounter {
+position: absolute;
+top: 20px;
+right: 20px;
+padding: 8px 13px;
+background: rgba(0,0,0,.55);
+border-radius: 5px;
+font-size: 17px;
+}
+
+#message {
+position: absolute;
+left: 50%;
+top: 14%;
+transform: translateX(-50%);
+font-size: 25px;
+font-weight: bold;
+text-shadow: 2px 2px 4px black;
+}
+
+#controls {
+position: absolute;
+left: 20px;
+bottom: 20px;
+padding: 11px 14px;
+background: rgba(0,0,0,.48);
+border-radius: 6px;
+line-height: 1.5;
+font-size: 13px;
+}
+
+.screen {
+position: fixed;
+inset: 0;
+z-index: 100;
+background: rgba(5,10,16,.86);
+display: flex;
+align-items: center;
+justify-content: center;
+flex-direction: column;
+text-align: center;
+}
+
+#endScreen {
+display: none;
+}
+
+h1 {
+margin: 0 0 12px;
+font-size: 54px;
+text-shadow: 3px 3px 0 #000;
+}
+
+.screen p {
+max-width: 600px;
+line-height: 1.6;
+opacity: .9;
+}
+
+button {
+border: 0;
+padding: 14px 30px;
+border-radius: 7px;
+background: #2689ff;
+color: white;
+font-size: 19px;
+font-weight: bold;
+cursor: pointer;
+box-shadow: 0 4px 0 #14549c;
+}
+
+button:active {
+transform: translateY(3px);
+box-shadow: 0 1px 0 #14549c;
+}
+
+#endTitle {
+font-size: 52px;
+font-weight: bold;
+margin-bottom: 10px;
+}
+
+#endText {
+font-size: 20px;
+margin-bottom: 25px;
+}
+
+#error {
+display: none;
+position: fixed;
+inset: 0;
+z-index: 999;
+background: #180b0b;
+color: white;
+padding: 40px;
+font-family: monospace;
+white-space: pre-wrap;
+}
+</style>
+</head> <body>
+
+<canvas id="game"></canvas>
+<div id="crosshair"></div> <div id="hud">
+
+<div id="healthBox">
+    <div id="healthOuter">
+        <div id="health"></div>
+    </div>
+    <div id="healthText">100 HP</div>
+</div>
+
+<div id="enemyCounter">Gegner: 0</div>
+
+<div id="message"></div>
+
+<div id="weaponBox">
+    <div id="weaponName">SCAR</div>
+    <div id="ammo">30 / ∞</div>
+    <div id="weaponHelp">
+        1 SCAR &nbsp; 2 PUMP &nbsp; 3 RAKETE
+    </div>
+</div>
+
+<div id="controls">
+    <b>WASD</b> Bewegen<br>
+    <b>Maus</b> Umschauen<br>
+    <b>Linksklick</b> Schießen<br>
+    <b>R</b> Nachladen<br>
+    <b>1 / 2 / 3</b> Waffen
+</div>
+
+</div> <div id="startScreen" class="screen"> <h1>MINI BATTLE ARENA</h1> <p> Ein einfacher First-Person-Shooter in reinem WebGL. Keine externen Libraries und keine externen Dateien. </p> <button id="startButton">SPIEL STARTEN</button> </div> <div id="endScreen" class="screen"> <div id="endTitle">SIEG!</div> <div id="endText"></div> <button onclick="location.reload()">NOCHMAL SPIELEN</button> </div> <div id="error"></div> <script> "use strict";
+/*
+MINI BATTLE ARENA
+Eine kleine WebGL-FPS-Engine ohne externe Libraries.
+
+*/
+
+const canvas = document.getElementById("game");
+const gl = canvas.getContext("webgl", {
+antialias: true,
+alpha: false
+});
+
+const errorBox = document.getElementById("error");
+
+if (!gl) {
+errorBox.style.display = "block";
+errorBox.textContent =
+"WebGL konnte in diesem Browser nicht gestartet werden.";
+throw new Error("WebGL unavailable");
+}
+
+/* =========================================================
+SHADER
+========================================================= */
+
+const vertexShaderSource = `
+attribute vec3 aPosition;
+attribute vec3 aNormal;
+
+uniform mat4 uProjection;
+uniform mat4 uView;
+uniform mat4 uModel;
+
+varying vec3 vNormal;
+varying vec3 vWorldPosition;
+
+void main() {
+
+vec4 worldPosition = uModel * vec4(aPosition, 1.0);
+
+vWorldPosition = worldPosition.xyz;
+
+vNormal =
+    mat3(uModel) * aNormal;
+
+gl_Position =
+    uProjection *
+    uView *
+    worldPosition;
+
+}
+`;
+
+const fragmentShaderSource = `
+precision mediump float;
+
+uniform vec4 uColor;
+uniform vec3 uLightDirection;
+
+varying vec3 vNormal;
+varying vec3 vWorldPosition;
+
+void main() {
+
+vec3 normal =
+    normalize(vNormal);
+
+float light =
+    max(
+        dot(normal, normalize(uLightDirection)),
+        0.0
+    );
+
+float brightness =
+    0.45 + light * 0.55;
+
+gl_FragColor =
+    vec4(
+        uColor.rgb * brightness,
+        uColor.a
+    );
+
+}
+`;
+
+function compileShader(type, source) {
+
+const shader =
+    gl.createShader(type);
+
+gl.shaderSource(shader, source);
+gl.compileShader(shader);
+
+if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+
+    throw new Error(
+        gl.getShaderInfoLog(shader)
+    );
+}
+
+return shader;
+
+}
+
+const vs =
+compileShader(
+gl.VERTEX_SHADER,
+vertexShaderSource
+);
+
+const fs =
+compileShader(
+gl.FRAGMENT_SHADER,
+fragmentShaderSource
+);
+
+const program =
+gl.createProgram();
+
+gl.attachShader(program, vs);
+gl.attachShader(program, fs);
+
+gl.linkProgram(program);
+
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+throw new Error(
+gl.getProgramInfoLog(program)
+);
+}
+
+gl.useProgram(program);
+
+/* =========================================================
+WEBGL LOCATIONS
+========================================================= */
+
+const aPosition =
+gl.getAttribLocation(program, "aPosition");
+
+const aNormal =
+gl.getAttribLocation(program, "aNormal");
+
+const uProjection =
+gl.getUniformLocation(program, "uProjection");
+
+const uView =
+gl.getUniformLocation(program, "uView");
+
+const uModel =
+gl.getUniformLocation(program, "uModel");
+
+const uColor =
+gl.getUniformLocation(program, "uColor");
+
+const uLightDirection =
+gl.getUniformLocation(
+program,
+"uLightDirection"
+);
+
+/* =========================================================
+MATHEMATIK
+========================================================= */
+
+function mat4Identity() {
+
+return [
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,0,
+    0,0,0,1
+];
+
+}
+
+function mat4Multiply(a, b) {
+
+const out = new Array(16);
+
+for (let column = 0; column < 4; column++) {
+
+    for (let row = 0; row < 4; row++) {
+
+        out[column * 4 + row] =
+            a[0 * 4 + row] * b[column * 4 + 0] +
+            a[1 * 4 + row] * b[column * 4 + 1] +
+            a[2 * 4 + row] * b[column * 4 + 2] +
+            a[3 * 4 + row] * b[column * 4 + 3];
+    }
+}
+
+return out;
+
+}
+
+function perspective(fov, aspect, near, far) {
+
+const f =
+    1 / Math.tan(fov / 2);
+
+const nf =
+    1 / (near - far);
+
+return [
+    f / aspect, 0, 0, 0,
+    0, f, 0, 0,
+    0, 0, (far + near) * nf, -1,
+    0, 0, (2 * far * near) * nf, 0
+];
+
+}
+
+function translation(x, y, z) {
+
+return [
+    1,0,0,0,
+    0,1,0,0,
+    0,0,1,0,
+    x,y,z,1
+];
+
+}
+
+function scale(x, y, z) {
+
+return [
+    x,0,0,0,
+    0,y,0,0,
+    0,0,z,0,
+    0,0,0,1
+];
+
+}
+
+function rotationY(angle) {
+
+const c = Math.cos(angle);
+const s = Math.sin(angle);
+
+return [
+     c,0,-s,0,
+     0,1, 0,0,
+     s,0, c,0,
+     0,0, 0,1
+];
+
+}
+
+function rotationX(angle) {
+
+const c = Math.cos(angle);
+const s = Math.sin(angle);
+
+return [
+    1, 0,0,0,
+    0, c,s,0,
+    0,-s,c,0,
+    0, 0,0,1
+];
+
+}
+
+function transformPoint(matrix, point) {
+
+const x = point[0];
+const y = point[1];
+const z = point[2];
+
+return [
+    matrix[0]*x +
+    matrix[4]*y +
+    matrix[8]*z +
+    matrix[12],
+
+    matrix[1]*x +
+    matrix[5]*y +
+    matrix[9]*z +
+    matrix[13],
+
+    matrix[2]*x +
+    matrix[6]*y +
+    matrix[10]*z +
+    matrix[14]
+];
+
+}
+
+/* =========================================================
+CUBE GEOMETRIE
+========================================================= */
+
+const cubeVertices = [
+
+// Front
+-0.5,-0.5, 0.5,
+ 0.5,-0.5, 0.5,
+ 0.5, 0.5, 0.5,
+-0.5, 0.5, 0.5,
+
+// Back
+-0.5,-0.5,-0.5,
+-0.5, 0.5,-0.5,
+ 0.5, 0.5,-0.5,
+ 0.5,-0.5,-0.5,
+
+// Top
+-0.5, 0.5,-0.5,
+-0.5, 0.5, 0.5,
+ 0.5, 0.5, 0.5,
+ 0.5, 0.5,-0.5,
+
+// Bottom
+-0.5,-0.5,-0.5,
+ 0.5,-0.5,-0.5,
+ 0.5,-0.5, 0.5,
+-0.5,-0.5, 0.5,
+
+// Right
+ 0.5,-0.5,-0.5,
+ 0.5, 0.5,-0.5,
+ 0.5, 0.5, 0.5,
+ 0.5,-0.5, 0.5,
+
+// Left
+-0.5,-0.5,-0.5,
+-0.5,-0.5, 0.5,
+-0.5, 0.5, 0.5,
+-0.5, 0.5,-0.5
+
+];
+
+const cubeNormals = [
+
+0,0,1,
+0,0,1,
+0,0,1,
+0,0,1,
+
+0,0,-1,
+0,0,-1,
+0,0,-1,
+0,0,-1,
+
+0,1,0,
+0,1,0,
+0,1,0,
+0,1,0,
+
+0,-1,0,
+0,-1,0,
+0,-1,0,
+0,-1,0,
+
+1,0,0,
+1,0,0,
+1,0,0,
+1,0,0,
+
+-1,0,0,
+-1,0,0,
+-1,0,0,
+-1,0,0
+
+];
+
+const cubeIndices = [
+
+ 0, 1, 2,  0, 2, 3,
+ 4, 5, 6,  4, 6, 7,
+ 8, 9,10,  8,10,11,
+12,13,14, 12,14,15,
+16,17,18, 16,18,19,
+20,21,22, 20,22,23
+
+];
+
+const vertexBuffer =
+gl.createBuffer();
+
+gl.bindBuffer(
+gl.ARRAY_BUFFER,
+vertexBuffer
+);
+
+gl.bufferData(
+gl.ARRAY_BUFFER,
+new Float32Array(cubeVertices),
+gl.STATIC_DRAW
+);
+
+const normalBuffer =
+gl.createBuffer();
+
+gl.bindBuffer(
+gl.ARRAY_BUFFER,
+normalBuffer
+);
+
+gl.bufferData(
+gl.ARRAY_BUFFER,
+new Float32Array(cubeNormals),
+gl.STATIC_DRAW
+);
+
+const indexBuffer =
+gl.createBuffer();
+
+gl.bindBuffer(
+gl.ELEMENT_ARRAY_BUFFER,
+indexBuffer
+);
+
+gl.bufferData(
+gl.ELEMENT_ARRAY_BUFFER,
+new Uint16Array(cubeIndices),
+gl.STATIC_DRAW
+);
+
+function setupAttributes() {
+
+gl.bindBuffer(
+    gl.ARRAY_BUFFER,
+    vertexBuffer
+);
+
+gl.enableVertexAttribArray(aPosition);
+
+gl.vertexAttribPointer(
+    aPosition,
+    3,
+    gl.FLOAT,
+    false,
+    0,
+    0
+);
+
+gl.bindBuffer(
+    gl.ARRAY_BUFFER,
+    normalBuffer
+);
+
+gl.enableVertexAttribArray(aNormal);
+
+gl.vertexAttribPointer(
+    aNormal,
+    3,
+    gl.FLOAT,
+    false,
+    0,
+    0
+);
+
+gl.bindBuffer(
+    gl.ELEMENT_ARRAY_BUFFER,
+    indexBuffer
+);
+
+}
+
+/* =========================================================
+SPIELER
+========================================================= */
+
+const player = {
+
+x: 0,
+y: 1.7,
+z: 180,
+
+yaw: Math.PI,
+pitch: 0,
+
+hp: 100,
+
+speed: 6,
+
+fireTimer: 0,
+
+weapon: "scar",
+
+weapons: {
+
+    scar: {
+        name: "SCAR",
+        magazine: 30,
+        ammo: 30,
+        damage: 24,
+        fireDelay: 0.10,
+        pellets: 1,
+        spread: 0.012
+    },
+
+    pump: {
+        name: "PUMP",
+        magazine: 6,
+        ammo: 6,
+        damage: 18,
+        fireDelay: 0.75,
+        pellets: 9,
+        spread: 0.065
+    },
+
+    rocket: {
+        name: "RAKETENWERFER",
+        magazine: 1,
+        ammo: 1,
+        damage: 110,
+        fireDelay: 1.0,
+        pellets: 1,
+        spread: 0
+    }
+}
+
+};
+
+/* =========================================================
+DECKUNGEN
+========================================================= */
+
+const obstacles = [
+
+{x:-180, y:1.5, z:-100, sx:80, sy:3, sz:25},
+{x:170,  y:1.5, z:-170, sx:100, sy:3, sz:25},
+
+{x:-220, y:1.5, z:180, sx:70, sy:3, sz:30},
+{x:210,  y:1.5, z:170, sx:75, sy:3, sz:30},
+
+{x:0, y:1.5, z:-260, sx:30, sy:3, sz:80},
+{x:0, y:1.5, z:260, sx:30, sy:3, sz:80},
+
+{x:-330, y:1.5, z:20, sx:25, sy:3, sz:90},
+{x:330, y:1.5, z:-20, sx:25, sy:3, sz:90}
+
+];
+
+/* =========================================================
+GEGNER
+========================================================= */
+
+let enemies = [];
+
+function createEnemies() {
+
+const positions = [
+
+    [-320,-300],
+    [300,-300],
+    [-320,300],
+    [320,300],
+
+    [-120,-370],
+    [120,-370],
+
+    [-370,0],
+    [370,0],
+
+    [-120,370],
+    [120,370]
+];
+
+enemies = positions.map((p, i) => ({
+
+    x: p[0],
+    y: 1.2,
+    z: p[1],
+
+    hp: 100,
+
+    radius: 1.0,
+
+    speed: 2.0,
+
+    shootTimer:
+        0.5 + Math.random() * 1.5,
+
+    alive: true,
+
+    color: i % 2 === 0
+        ? [0.85,0.16,0.13,1]
+        : [0.9,0.3,0.12,1]
+}));
+
+}
+
+/* =========================================================
+EINGABE
+========================================================= */
+
+const keys = {};
+
+let mouseDown = false;
+
+document.addEventListener("keydown", e => {
+
+keys[e.key.toLowerCase()] = true;
+
+if (!gameStarted) return;
+
+if (e.key === "1")
+    switchWeapon("scar");
+
+if (e.key === "2")
+    switchWeapon("pump");
+
+if (e.key === "3")
+    switchWeapon("rocket");
+
+if (e.key.toLowerCase() === "r")
+    reload();
+
+});
+
+document.addEventListener("keyup", e => {
+
+keys[e.key.toLowerCase()] = false;
+
+});
+
+canvas.addEventListener("mousedown", e => {
+
+if (!gameStarted) return;
+
+if (e.button === 0) {
+
+    mouseDown = true;
+
+    shoot();
+}
+
+});
+
+document.addEventListener("mouseup", e => {
+
+if (e.button === 0)
+    mouseDown = false;
+
+});
+
+document.addEventListener("mousemove", e => {
+
+if (!gameStarted) return;
+
+if (document.pointerLockElement !== canvas)
+    return;
+
+const sensitivity = 0.0022;
+
+player.yaw +=
+    e.movementX * sensitivity;
+
+player.pitch -=
+    e.movementY * sensitivity;
+
+const limit =
+    Math.PI / 2 - 0.08;
+
+player.pitch =
+    Math.max(
+        -limit,
+        Math.min(limit, player.pitch)
+    );
+
+});
+
+/* =========================================================
+POINTER LOCK
+========================================================= */
+
+function lockMouse() {
+
+canvas.requestPointerLock();
+
+}
+
+document.addEventListener(
+"pointerlockchange",
+() => {
+
+    if (
+        gameStarted &&
+        document.pointerLockElement !== canvas
+    ) {
+
+        message(
+            "Klicke ins Spielfeld, um die Maus wieder zu aktivieren.",
+            0
+        );
+    }
+}
+
+);
+
+/* =========================================================
+START
+========================================================= */
+
+let gameStarted = false;
+let gameEnded = false;
+
+document.getElementById("startButton").onclick = () => {
+
+document.getElementById(
+    "startScreen"
+).style.display = "none";
+
+gameStarted = true;
+
+createEnemies();
+
+updateWeaponUI();
+
+lockMouse();
+
+lastTime = performance.now();
+
+requestAnimationFrame(gameLoop);
+
+};
+
+/* =========================================================
+WAFFEN
+========================================================= */
+
+function switchWeapon(name) {
+
+if (!player.weapons[name])
+    return;
+
+player.weapon = name;
+
+updateWeaponUI();
+
+}
+
+function reload() {
+
+if (!gameStarted || gameEnded)
+    return;
+
+const weapon =
+    player.weapons[player.weapon];
+
+weapon.ammo =
+    weapon.magazine;
+
+updateWeaponUI();
+
+message("NACHGELADEN", 0.5);
+
+}
+
+function updateWeaponUI() {
+
+const weapon =
+    player.weapons[player.weapon];
+
+document.getElementById(
+    "weaponName"
+).textContent = weapon.name;
+
+document.getElementById(
+    "ammo"
+).textContent =
+    weapon.ammo + " / ∞";
+
+}
+
+/* =========================================================
+SCHIESSEN
+========================================================= */
+
+function shoot() {
+
+if (!gameStarted || gameEnded)
+    return;
+
+if (player.fireTimer > 0)
+    return;
+
+const weapon =
+    player.weapons[player.weapon];
+
+if (weapon.ammo <= 0) {
+
+    reload();
+    return;
+}
+
+weapon.ammo--;
+
+player.fireTimer =
+    weapon.fireDelay;
+
+updateWeaponUI();
+
+if (player.weapon === "rocket") {
+
+    fireRocket();
+
+    return;
+}
+
+for (
+    let i = 0;
+    i < weapon.pellets;
+    i++
+) {
+
+    let yaw =
+        player.yaw +
+        (Math.random() - 0.5) *
+        weapon.spread;
+
+    let pitch =
+        player.pitch +
+        (Math.random() - 0.5) *
+        weapon.spread;
+
+    fireHitscan(
+        yaw,
+        pitch,
+        weapon.damage
+    );
+}
+
+}
+
+/* =========================================================
+RICHTUNG
+========================================================= */
+
+function directionFromAngles(yaw, pitch) {
+    const cp = Math.cos(pitch);
+
+    return {
+        x: -Math.sin(yaw) * cp,
+        y: Math.sin(pitch),
+        z: -Math.cos(yaw) * cp
+    };
+}
+
+
+/* =========================================================
+RAYCAST
+========================================================= */
+
+function fireHitscan(yaw, pitch, damage) {
+
+const direction =
+    directionFromAngles(
+        yaw,
+        pitch
+    );
+
+let nearest = null;
+let nearestDistance = Infinity;
+
+/*
+   Gegner treffen.
+   Wir behandeln jeden Gegner als Kugel.
+*/
+
+for (const enemy of enemies) {
+
+    if (!enemy.alive)
+        continue;
+
+    const ox =
+        player.x - enemy.x;
+
+    const oy =
+        player.y - enemy.y;
+
+    const oz =
+        player.z - enemy.z;
+
+    const b =
+        ox * direction.x +
+        oy * direction.y +
+        oz * direction.z;
+
+    const c =
+        ox*ox +
+        oy*oy +
+        oz*oz -
+        enemy.radius*enemy.radius;
+
+    const discriminant =
+        b*b - c;
+
+    if (discriminant < 0)
+        continue;
+
+    const t =
+        -b -
+        Math.sqrt(discriminant);
+
+    if (
+        t > 0 &&
+        t < nearestDistance
+    ) {
+
+        nearestDistance = t;
+
+        nearest = enemy;
+    }
+}
+
+/*
+   Deckungen blockieren den Schuss.
+*/
+
+for (const box of obstacles) {
+
+    const distance =
+        rayBoxDistance(
+            player.x,
+            player.y,
+            player.z,
+            direction.x,
+            direction.y,
+            direction.z,
+            box
+        );
+
+    if (
+        distance !== null &&
+        distance < nearestDistance
+    ) {
+
+        nearest = null;
+
+        nearestDistance = distance;
+    }
+}
+
+if (nearest) {
+
+    nearest.hp -= damage;
+
+    if (nearest.hp <= 0)
+        killEnemy(nearest);
+}
+
+}
+
+/*
+Ray / Axis-Aligned Bounding Box.
+*/
+
+function rayBoxDistance(
+ox, oy, oz,
+dx, dy, dz,
+box
+) {
+
+const minX =
+    box.x - box.sx / 2;
+
+const maxX =
+    box.x + box.sx / 2;
+
+const minY =
+    box.y - box.sy / 2;
+
+const maxY =
+    box.y + box.sy / 2;
+
+const minZ =
+    box.z - box.sz / 2;
+
+const maxZ =
+    box.z + box.sz / 2;
+
+let tmin = -Infinity;
+let tmax = Infinity;
+
+if (Math.abs(dx) < 0.00001) {
+
+    if (ox < minX || ox > maxX)
+        return null;
+
+} else {
+
+    let t1 =
+        (minX - ox) / dx;
+
+    let t2 =
+        (maxX - ox) / dx;
+
+    if (t1 > t2) {
+        const temp = t1;
+        t1 = t2;
+        t2 = temp;
+    }
+
+    tmin = Math.max(tmin, t1);
+    tmax = Math.min(tmax, t2);
+}
+
+if (Math.abs(dy) < 0.00001) {
+
+    if (oy < minY || oy > maxY)
+        return null;
+
+} else {
+
+    let t1 =
+        (minY - oy) / dy;
+
+    let t2 =
+        (maxY - oy) / dy;
+
+    if (t1 > t2) {
+        const temp = t1;
+        t1 = t2;
+        t2 = temp;
+    }
+
+    tmin = Math.max(tmin, t1);
+    tmax = Math.min(tmax, t2);
+}
+
+if (Math.abs(dz) < 0.00001) {
+
+    if (oz < minZ || oz > maxZ)
+        return null;
+
+} else {
+
+    let t1 =
+        (minZ - oz) / dz;
+
+    let t2 =
+        (maxZ - oz) / dz;
+
+    if (t1 > t2) {
+        const temp = t1;
+        t1 = t2;
+        t2 = temp;
+    }
+
+    tmin = Math.max(tmin, t1);
+    tmax = Math.min(tmax, t2);
+}
+
+if (tmax < 0 || tmin > tmax)
+    return null;
+
+return tmin >= 0
+    ? tmin
+    : tmax;
+
+}
+
+/* =========================================================
+RAKETE
+========================================================= */
+
+let rockets = [];
+
+function fireRocket() {
+
+const direction =
+    directionFromAngles(
+        player.yaw,
+        player.pitch
+    );
+
+rockets.push({
+
+    x: player.x,
+    y: player.y,
+    z: player.z,
+
+    dx: direction.x,
+    dy: direction.y,
+    dz: direction.z,
+
+    speed: 24,
+
+    life: 3
+});
+
+}
+
+function updateRockets(dt) {
+
+for (
+    let i = rockets.length - 1;
+    i >= 0;
+    i--
+) {
+
+    const rocket = rockets[i];
+
+    const oldX = rocket.x;
+    const oldY = rocket.y;
+    const oldZ = rocket.z;
+
+    rocket.x +=
+        rocket.dx *
+        rocket.speed *
+        dt;
+
+    rocket.y +=
+        rocket.dy *
+        rocket.speed *
+        dt;
+
+    rocket.z +=
+        rocket.dz *
+        rocket.speed *
+        dt;
+
+    rocket.life -= dt;
+
+    let explodeNow =
+        rocket.life <= 0;
+
+    /*
+       Gegner treffen.
+    */
+
+    for (const enemy of enemies) {
+
+        if (!enemy.alive)
+            continue;
+
+        const d =
+            distance3(
+                rocket.x,
+                rocket.y,
+                rocket.z,
+                enemy.x,
+                enemy.y,
+                enemy.z
+            );
+
+        if (d < 2.0) {
+
+            explodeNow = true;
+            break;
+        }
+    }
+
+    /*
+       Deckung treffen.
+    */
+
+    for (const box of obstacles) {
+
+        if (
+            pointInsideBox(
+                rocket.x,
+                rocket.y,
+                rocket.z,
+                box
+            )
+        ) {
+
+            explodeNow = true;
+            break;
+        }
+    }
+
+    if (
+        Math.abs(rocket.x) > 520 ||
+        Math.abs(rocket.z) > 520 ||
+        rocket.y < -2 ||
+        rocket.y > 80
+    ) {
+        explodeNow = true;
+    }
+
+    if (explodeNow) {
+
+        explode(
+            rocket.x,
+            rocket.y,
+            rocket.z
+        );
+
+        rockets.splice(i, 1);
+    }
+}
+
+}
+
+function pointInsideBox(x,y,z,box) {
+
+return (
+    x >= box.x - box.sx/2 &&
+    x <= box.x + box.sx/2 &&
+    y >= box.y - box.sy/2 &&
+    y <= box.y + box.sy/2 &&
+    z >= box.z - box.sz/2 &&
+    z <= box.z + box.sz/2
+);
+
+}
+
+function explode(x,y,z) {
+
+const radius = 9;
+
+for (const enemy of enemies) {
+
+    if (!enemy.alive)
+        continue;
+
+    const d =
+        distance3(
+            x,y,z,
+            enemy.x,
+            enemy.y,
+            enemy.z
+        );
+
+    if (d < radius) {
+
+        const damage =
+            110 *
+            (1 - d / radius);
+
+        enemy.hp -= damage;
+
+        if (enemy.hp <= 0)
+            killEnemy(enemy);
+    }
+}
+
+}
+
+/* =========================================================
+GEGNER
+========================================================= */
+
+function updateEnemies(dt) {
+
+for (const enemy of enemies) {
+
+    if (!enemy.alive)
+        continue;
+
+    const dx =
+        player.x - enemy.x;
+
+    const dz =
+        player.z - enemy.z;
+
+    const distance =
+        Math.sqrt(
+            dx*dx + dz*dz
+        );
+
+    /*
+       Gegner bewegen sich auf den Spieler zu,
+       bleiben aber etwas entfernt.
+    */
+
+    if (distance > 25) {
+
+        const nx = dx / distance;
+        const nz = dz / distance;
+
+        const nextX =
+            enemy.x +
+            nx *
+            enemy.speed *
+            dt;
+
+        const nextZ =
+            enemy.z +
+            nz *
+            enemy.speed *
+            dt;
+
+        if (!collidesWithObstacle(
+            nextX,
+            nextZ,
+            1.2
+        )) {
+
+            enemy.x = nextX;
+            enemy.z = nextZ;
+        }
+    }
+
+    enemy.shootTimer -= dt;
+
+    if (
+        enemy.shootTimer <= 0 &&
+        distance < 300
+    ) {
+
+        enemy.shootTimer =
+            0.8 +
+            Math.random() * 1.2;
+
+        enemyShoot(enemy);
+    }
+}
+
+}
+
+function enemyShoot(enemy) {
+
+/*
+   Prüfen, ob eine Deckung zwischen
+   Gegner und Spieler liegt.
+*/
+
+const dx =
+    player.x - enemy.x;
+
+const dy =
+    player.y - enemy.y;
+
+const dz =
+    player.z - enemy.z;
+
+const length =
+    Math.sqrt(
+        dx*dx +
+        dy*dy +
+        dz*dz
+    );
+
+const dir = {
+    x: dx / length,
+    y: dy / length,
+    z: dz / length
+};
+
+for (const box of obstacles) {
+
+    const d =
+        rayBoxDistance(
+            enemy.x,
+            enemy.y,
+            enemy.z,
+            dir.x,
+            dir.y,
+            dir.z,
+            box
+        );
+
+    if (
+        d !== null &&
+        d < length
+    ) {
+
+        return;
+    }
+}
+
+/*
+   Absichtlich nicht perfekt präzise:
+   Die Gegner sollen einfach sein.
+*/
+
+if (Math.random() < 0.72) {
+
+    damagePlayer(
+        8 + Math.random() * 5
+    );
+}
+
+}
+
+function collidesWithObstacle(
+x,
+z,
+radius
+) {
+
+for (const box of obstacles) {
+
+    const closestX =
+        Math.max(
+            box.x - box.sx/2,
+            Math.min(
+                x,
+                box.x + box.sx/2
+            )
+        );
+
+    const closestZ =
+        Math.max(
+            box.z - box.sz/2,
+            Math.min(
+                z,
+                box.z + box.sz/2
+            )
+        );
+
+    const dx =
+        x - closestX;
+
+    const dz =
+        z - closestZ;
+
+    if (
+        dx*dx +
+        dz*dz <
+        radius*radius
+    ) {
+
+        return true;
+    }
+}
+
+return false;
+
+}
+
+function killEnemy(enemy) {
+
+if (!enemy.alive)
+    return;
+
+enemy.alive = false;
+
+updateEnemyCounter();
+
+if (
+    enemies.every(
+        e => !e.alive
+    )
+) {
+
+    endGame(true);
+}
+
+}
+
+/* =========================================================
+SPIELER
+========================================================= */
+
+function updatePlayer(dt) {
+
+let forward = 0;
+let right = 0;
+
+if (keys["w"])
+    forward += 1;
+
+if (keys["s"])
+    forward -= 1;
+
+if (keys["d"])
+    right += 1;
+
+if (keys["a"])
+    right -= 1;
+
+if (
+    forward !== 0 ||
+    right !== 0
+) {
+
+    const length =
+        Math.sqrt(
+            forward*forward +
+            right*right
+        );
+
+    forward /= length;
+    right /= length;
+
+    /*
+       Wichtig:
+       Die Bewegung wird aus der Kamera-
+       ausrichtung berechnet.
+    */
+
+const forwardX =
+    -Math.sin(player.yaw);
+
+const forwardZ =
+    -Math.cos(player.yaw);
+
+const rightX =
+    Math.cos(player.yaw);
+
+const rightZ =
+    -Math.sin(player.yaw);
+
+
+    const moveX =
+        (
+            forward * forwardX +
+            right * rightX
+        ) *
+        player.speed *
+        dt;
+
+    const moveZ =
+        (
+            forward * forwardZ +
+            right * rightZ
+        ) *
+        player.speed *
+        dt;
+
+    const nextX =
+        player.x + moveX;
+
+    const nextZ =
+        player.z + moveZ;
+
+    if (
+        !collidesWithObstacle(
+            nextX,
+            player.z,
+            0.55
+        )
+    ) {
+
+        player.x = nextX;
+    }
+
+    if (
+        !collidesWithObstacle(
+            player.x,
+            nextZ,
+            0.55
+        )
+    ) {
+
+        player.z = nextZ;
+    }
+}
+
+/*
+   Arena-Grenzen.
+*/
+
+player.x =
+    Math.max(
+        -490,
+        Math.min(490, player.x)
+    );
+
+player.z =
+    Math.max(
+        -490,
+        Math.min(490, player.z)
+    );
+
+}
+
+/* =========================================================
+SPIELER SCHADEN
+========================================================= */
+
+function damagePlayer(amount) {
+
+if (gameEnded)
+    return;
+
+player.hp -= amount;
+
+player.hp =
+    Math.max(
+        0,
+        player.hp
+    );
+
+updateHealth();
+
+if (player.hp <= 0) {
+
+    endGame(false);
+}
+
+}
+
+function updateHealth() {
+
+document.getElementById(
+    "health"
+).style.width =
+    player.hp + "%";
+
+document.getElementById(
+    "healthText"
+).textContent =
+    Math.ceil(player.hp) + " HP";
+
+}
+
+/* =========================================================
+UI
+========================================================= */
+
+function updateEnemyCounter() {
+
+const remaining =
+    enemies.filter(
+        e => e.alive
+    ).length;
+
+document.getElementById(
+    "enemyCounter"
+).textContent =
+    "Gegner: " + remaining;
+
+}
+
+let messageTimer = 0;
+
+function message(text, duration) {
+
+document.getElementById(
+    "message"
+).textContent = text;
+
+messageTimer = duration;
+
+}
+
+/* =========================================================
+RENDERING
+========================================================= */
+
+function resize() {
+
+const dpr =
+    Math.min(
+        window.devicePixelRatio || 1,
+        2
+    );
+
+canvas.width =
+    Math.floor(
+        window.innerWidth * dpr
+    );
+
+canvas.height =
+    Math.floor(
+        window.innerHeight * dpr
+    );
+
+gl.viewport(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+);
+
+}
+
+window.addEventListener(
+"resize",
+resize
+);
+
+resize();
+
+gl.enable(
+gl.DEPTH_TEST
+);
+
+gl.enable(
+gl.CULL_FACE
+);
+
+gl.clearColor(
+0.45,
+0.67,
+0.78,
+1
+);
+
+gl.uniform3f(
+uLightDirection,
+-0.5,
+1.0,
+0.35
+);
+
+function drawCube(
+x,y,z,
+sx,sy,sz,
+color,
+rotation = 0
+) {
+
+let model =
+    translation(x,y,z);
+
+if (rotation !== 0) {
+
+    model =
+        mat4Multiply(
+            model,
+            rotationY(rotation)
+        );
+}
+
+model =
+    mat4Multiply(
+        model,
+        scale(sx,sy,sz)
+    );
+
+gl.uniformMatrix4fv(
+    uModel,
+    false,
+    new Float32Array(model)
+);
+
+gl.uniform4fv(
+    uColor,
+    new Float32Array(color)
+);
+
+gl.drawElements(
+    gl.TRIANGLES,
+    cubeIndices.length,
+    gl.UNSIGNED_SHORT,
+    0
+);
+
+}
+
+/* =========================================================
+WELT RENDERN
+========================================================= */
+
+function renderWorld() {
+
+/*
+   Boden
+*/
+
+drawCube(
+    0,
+    -0.5,
+    0,
+    1000,
+    1,
+    1000,
+    [0.28,0.52,0.20,1]
+);
+
+/*
+   Arena-Grenzwände
+*/
+
+drawCube(
+    0, 4, -505,
+    1010, 8, 10,
+    [0.18,0.25,0.20,1]
+);
+
+drawCube(
+    0, 4, 505,
+    1010, 8, 10,
+    [0.18,0.25,0.20,1]
+);
+
+drawCube(
+    -505, 4, 0,
+    10, 8, 1010,
+    [0.18,0.25,0.20,1]
+);
+
+drawCube(
+    505, 4, 0,
+    10, 8, 1010,
+    [0.18,0.25,0.20,1]
+);
+
+/*
+   Deckungen
+*/
+
+for (const box of obstacles) {
+
+    drawCube(
+        box.x,
+        box.y,
+        box.z,
+        box.sx,
+        box.sy,
+        box.sz,
+        [0.34,0.38,0.40,1]
+    );
+}
+
+/*
+   Gegner.
+   Jeder Gegner besteht aus Körper + Kopf.
+*/
+
+for (const enemy of enemies) {
+
+    if (!enemy.alive)
+        continue;
+
+    drawCube(
+        enemy.x,
+        1.1,
+        enemy.z,
+        1.7,
+        2.2,
+        1.2,
+        enemy.color
+    );
+
+    drawCube(
+        enemy.x,
+        2.65,
+        enemy.z,
+        1.15,
+        1.15,
+        1.15,
+        [0.78,0.56,0.42,1]
+    );
+}
+
+}
+
+/* =========================================================
+KAMERA
+========================================================= */
+
+function renderCamera() {
+
+/*
+   Kamera befindet sich direkt beim Spieler.
+   Dadurch echtes First-Person-Verhalten.
+*/
+
+let view =
+    rotationY(-player.yaw);
+
+view =
+    mat4Multiply(
+        view,
+        rotationX(-player.pitch)
+    );
+
+view =
+    mat4Multiply(
+        view,
+        translation(
+            -player.x,
+            -player.y,
+            -player.z
+        )
+    );
+
+gl.uniformMatrix4fv(
+    uView,
+    false,
+    new Float32Array(view)
+);
+
+const aspect =
+    canvas.width /
+    canvas.height;
+
+const projection =
+    perspective(
+        Math.PI / 3,
+        aspect,
+        0.05,
+        1200
+    );
+
+gl.uniformMatrix4fv(
+    uProjection,
+    false,
+    new Float32Array(projection)
+);
+
+}
+
+/* =========================================================
+RAKETEN VISUALISIERUNG
+========================================================= */
+
+function renderRockets() {
+
+for (const rocket of rockets) {
+
+    drawCube(
+        rocket.x,
+        rocket.y,
+        rocket.z,
+        0.35,
+        0.35,
+        1.0,
+        [1.0,0.22,0.04,1]
+    );
+}
+
+}
+
+/* =========================================================
+GAME LOOP
+========================================================= */
+
+let lastTime = performance.now();
+
+function gameLoop(time) {
+
+if (!gameStarted || gameEnded)
+    return;
+
+let dt =
+    (time - lastTime) / 1000;
+
+lastTime = time;
+
+/*
+   Große Zeitsprünge verhindern.
+*/
+
+dt =
+    Math.min(
+        dt,
+        0.05
+    );
+
+if (player.fireTimer > 0) {
+
+    player.fireTimer -= dt;
+
+    if (player.fireTimer < 0)
+        player.fireTimer = 0;
+}
+
+if (messageTimer > 0) {
+
+    messageTimer -= dt;
+
+    if (messageTimer <= 0) {
+
+        document.getElementById(
+            "message"
+        ).textContent = "";
+    }
+}
+
+updatePlayer(dt);
+
+updateEnemies(dt);
+
+updateRockets(dt);
+
+/*
+   Automatisches Dauerfeuer mit der SCAR,
+   solange Linksklick gehalten wird.
+*/
+
+if (
+    mouseDown &&
+    player.weapon === "scar"
+) {
+
+    shoot();
+}
+
+gl.clear(
+    gl.COLOR_BUFFER_BIT |
+    gl.DEPTH_BUFFER_BIT
+);
+
+setupAttributes();
+
+renderCamera();
+
+renderWorld();
+
+renderRockets();
+
+requestAnimationFrame(gameLoop);
+
+}
+
+/* =========================================================
+ENDE
+========================================================= */
+
+function endGame(win) {
+
+if (gameEnded)
+    return;
+
+gameEnded = true;
+
+document.exitPointerLock();
+
+const screen =
+    document.getElementById(
+        "endScreen"
+    );
+
+const title =
+    document.getElementById(
+        "endTitle"
+    );
+
+const text =
+    document.getElementById(
+        "endText"
+    );
+
+screen.style.display = "flex";
+
+if (win) {
+
+    title.textContent = "SIEG!";
+    title.style.color = "#55ef69";
+
+    text.textContent =
+        "Du hast alle Gegner besiegt.";
+
+} else {
+
+    title.textContent =
+        "AUSGESCHIEDEN";
+
+    title.style.color =
+        "#ff5555";
+
+    text.textContent =
+        "Du wurdest von den Gegnern besiegt.";
+}
+
+}
+
+/* =========================================================
+HILFSFUNKTIONEN
+========================================================= */
+
+function distance3(
+ax, ay, az,
+bx, by, bz
+) {
+
+const dx = ax - bx;
+const dy = ay - by;
+const dz = az - bz;
+
+return Math.sqrt(
+    dx*dx +
+    dy*dy +
+    dz*dz
+);
+
+}
+
+/* =========================================================
+INITIALISIERUNG
+========================================================= */
+
+gl.useProgram(program);
+
+setupAttributes();
+
+updateHealth();
+
+updateWeaponUI();
+
+updateEnemyCounter();
+</script> </body> </html>
