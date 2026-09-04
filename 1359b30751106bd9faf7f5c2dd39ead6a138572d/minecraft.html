@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep Miner</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #111;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+#game {
+    display: flex;
+    height: 100vh;
+}
+
+#sidebar {
+    width: 260px;
+    background: #202020;
+    border-right: 3px solid #444;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+h1 {
+    color: #ffd43b;
+    font-size: 24px;
+    margin-top: 0;
+}
+
+h2 {
+    font-size: 17px;
+    color: #aaa;
+}
+
+.stat {
+    background: #303030;
+    padding: 8px;
+    margin: 6px 0;
+    border-radius: 6px;
+}
+
+.bar {
+    height: 18px;
+    background: #444;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.bar div {
+    height: 100%;
+}
+
+#hpBar {
+    background: #e53935;
+}
+
+#armorBar {
+    background: #2196f3;
+}
+
+button {
+    width: 100%;
+    margin: 5px 0;
+    padding: 9px;
+    border: none;
+    border-radius: 6px;
+    background: #3b3b3b;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+button:hover {
+    background: #555;
+}
+
+button.active {
+    background: #c28a00;
+}
+
+#mineArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #101010;
+}
+
+#topbar {
+    width: 100%;
+    padding: 10px;
+    background: #191919;
+    border-bottom: 2px solid #333;
+    text-align: center;
+}
+
+#world {
+    position: relative;
+    width: min(700px, 90vw);
+    height: calc(100vh - 65px);
+    overflow-y: auto;
+    background: #654321;
+}
+
+.layer {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.block {
+    height: 80px;
+    border: 1px solid rgba(0,0,0,.25);
+    position: relative;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 30px;
+    user-select: none;
+}
+
+.block:hover {
+    filter: brightness(1.3);
+}
+
+.block .depth {
+    position: absolute;
+    left: 4px;
+    bottom: 3px;
+    font-size: 10px;
+    color: rgba(255,255,255,.5);
+}
+
+.player {
+    position: absolute;
+    width: 55px;
+    height: 70px;
+    font-size: 48px;
+    z-index: 10;
+    pointer-events: none;
+    transition: top .2s;
+}
+
+.inventoryItem {
+    display: flex;
+    justify-content: space-between;
+    background: #292929;
+    padding: 6px;
+    margin: 3px 0;
+    border-radius: 4px;
+}
+
+.equipment {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+}
+
+.equip {
+    background: #292929;
+    padding: 8px;
+    text-align: center;
+    border-radius: 5px;
+}
+
+#message {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.85);
+    padding: 12px 20px;
+    border-radius: 8px;
+    display: none;
+    z-index: 100;
+}
+
+.shop {
+    margin-top: 15px;
+    border-top: 1px solid #444;
+    padding-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+    <aside id="sidebar">
+        <h1>⛏️ Deep Miner</h1>
+
+        <div class="stat">
+            ❤️ Leben
+            <div class="bar">
+                <div id="hpBar" style="width:100%"></div>
+            </div>
+        </div>
+
+        <div class="stat">
+            🛡️ Rüstung
+            <div class="bar">
+                <div id="armorBar" style="width:0%"></div>
+            </div>
+        </div>
+
+        <div class="stat">
+            📍 Tiefe: <span id="depthText">0</span> m
+        </div>
+
+        <h2>Werkzeuge</h2>
+
+        <button id="pickaxeBtn" onclick="selectTool('pickaxe')">
+            ⛏️ Spitzhacke
+        </button>
+
+        <button id="shovelBtn" onclick="selectTool('shovel')">
+            🪣 Schaufel
+        </button>
+
+        <button id="swordBtn" onclick="selectTool('sword')">
+            ⚔️ Schwert
+        </button>
+
+        <h2>Ausrüstung</h2>
+
+        <div class="equipment">
+            <div class="equip">🪖<br>Helm<br><span id="helmet">Leer</span></div>
+            <div class="equip">🛡️<br>Brustplatte<br><span id="chest">Leer</span></div>
+            <div class="equip">👖<br>Hose<br><span id="pants">Leer</span></div>
+            <div class="equip">👢<br>Schuhe<br><span id="boots">Leer</span></div>
+        </div>
+
+        <h2>Inventar</h2>
+        <div id="inventory"></div>
+
+        <div class="shop">
+            <h2>⚒️ Ausrüstung herstellen</h2>
+
+            <button onclick="craft('helmet')">
+                🪖 Eisenhelm – 10 Eisen
+            </button>
+
+            <button onclick="craft('chest')">
+                🛡️ Eisen-Brustplatte – 20 Eisen
+            </button>
+
+            <button onclick="craft('pants')">
+                👖 Eisenhose – 15 Eisen
+            </button>
+
+            <button onclick="craft('boots')">
+                👢 Eisenschuhe – 10 Eisen
+            </button>
+
+            <button onclick="craft('sword')">
+                ⚔️ Eisenschwert – 15 Eisen
+            </button>
+
+            <button onclick="saveGame()">
+                💾 Speichern
+            </button>
+
+            <button onclick="resetGame()">
+                🔄 Neues Spiel
+            </button>
+        </div>
+    </aside>
+
+    <main id="mineArea">
+
+        <div id="topbar">
+            <b>⛏️ Baue dich immer weiter nach unten!</b>
+            &nbsp; | &nbsp;
+            Werkzeug: <span id="toolText">Spitzhacke</span>
+        </div>
+
+        <div id="world"></div>
+
+    </main>
+</div>
+
+<div id="message"></div>
+
+<script>
+
+const cols = 7;
+const rows = 100;
+
+let player = {
+    depth: 0,
+    hp: 100,
+    tool: "pickaxe",
+    equipment: {
+        helmet: false,
+        chest: false,
+        pants: false,
+        boots: false
+    }
+};
+
+let inventory = {
+    dirt: 0,
+    stone: 0,
+    coal: 0,
+    iron: 0,
+    gold: 0,
+    diamond: 0
+};
+
+let blocks = [];
+
+const blockTypes = {
+    dirt: {
+        name: "Erde",
+        icon: "🟫",
+        color: "#76502b",
+        hardness: 1,
+        tool: "shovel"
+    },
+
+    stone: {
+        name: "Stein",
+        icon: "⬜",
+        color: "#686868",
+        hardness: 3,
+        tool: "pickaxe"
+    },
+
+    coal: {
+        name: "Kohle",
+        icon: "⚫",
+        color: "#343434",
+        hardness: 3,
+        tool: "pickaxe"
+    },
+
+    iron: {
+        name: "Eisen",
+        icon: "🔩",
+        color: "#9b806d",
+        hardness: 5,
+        tool: "pickaxe"
+    },
+
+    gold: {
+        name: "Gold",
+        icon: "🟨",
+        color: "#b99500",
+        hardness: 7,
+        tool: "pickaxe"
+    },
+
+    diamond: {
+        name: "Diamant",
+        icon: "💎",
+        color: "#168c9e",
+        hardness: 10,
+        tool: "pickaxe"
+    }
+};
+
+function generateWorld() {
+
+    blocks = [];
+
+    for (let y = 0; y < rows; y++) {
+
+        let row = [];
+
+        for (let x = 0; x < cols; x++) {
+
+            let depth = y;
+
+            let type = "stone";
+
+            if (depth < 3) {
+                type = "dirt";
+            }
+            else if (depth < 12) {
+                type = Math.random() < .12 ? "coal" : "stone";
+            }
+            else if (depth < 30) {
+                let r = Math.random();
+
+                if (r < .12) type = "coal";
+                else if (r < .20) type = "iron";
+                else type = "stone";
+            }
+            else if (depth < 60) {
+                let r = Math.random();
+
+                if (r < .08) type = "iron";
+                else if (r < .14) type = "gold";
+                else type = "stone";
+            }
+            else {
+                let r = Math.random();
+
+                if (r < .08) type = "gold";
+                else if (r < .13) type = "diamond";
+                else if (r < .20) type = "iron";
+                else type = "stone";
+            }
+
+            row.push({
+                type: type,
+                mined: false
+            });
+        }
+
+        blocks.push(row);
+    }
+}
+
+function renderWorld() {
+
+    const world = document.getElementById("world");
+    world.innerHTML = "";
+
+    blocks.forEach((row, y) => {
+
+        const layer = document.createElement("div");
+        layer.className = "layer";
+
+        row.forEach((block, x) => {
+
+            const el = document.createElement("div");
+            el.className = "block";
+
+            if (block.mined) {
+
+                el.style.background = "#171717";
+                el.innerHTML = "🕳️";
+
+                el.onclick = () => {
+
+                    if (y <= player.depth + 1) {
+                        goDeeper(y);
+                    }
+
+                };
+
+            } else {
+
+                const info = blockTypes[block.type];
+
+                el.style.background = info.color;
+                el.innerHTML = info.icon;
+
+                el.onclick = () => mineBlock(x, y);
+            }
+
+            const depth = document.createElement("span");
+            depth.className = "depth";
+            depth.innerText = y + " m";
+
+            el.appendChild(depth);
+            layer.appendChild(el);
+        });
+
+        world.appendChild(layer);
+    });
+
+    updateUI();
+
+    // automatisch zur Spielertiefe scrollen
+    const target = blocks[player.depth]?.[0];
+
+    if (target) {
+        world.scrollTop = Math.max(0, player.depth * 80 - 250);
+    }
+}
+
+function mineBlock(x, y) {
+
+    if (y > player.depth + 1) {
+
+        showMessage("⛔ Du musst zuerst die oberen Schichten abbauen!");
+
+        return;
+    }
+
+    const block = blocks[y][x];
+
+    if (block.mined) return;
+
+    const info = blockTypes[block.type];
+
+    let damage = 1;
+
+    if (player.tool === "pickaxe") {
+
+        if (info.tool === "pickaxe") damage = 2;
+
+    }
+
+    if (player.tool === "shovel") {
+
+        if (info.tool === "shovel") damage = 4;
+        else damage = .5;
+    }
+
+    if (player.tool === "sword") {
+
+        damage = .2;
+    }
+
+    block.hits = (block.hits || 0) + damage;
+
+    if (block.hits >= info.hardness) {
+
+        block.mined = true;
+
+        inventory[block.type]++;
+
+        showMessage(
+            "⛏️ " + info.name + " abgebaut! +" +
+            info.name
+        );
+
+        // Wenn die ganze aktuelle Ebene geöffnet wurde,
+        // kann der Spieler tiefer gehen.
+        if (blocks[y].every(b => b.mined)) {
+
+            if (y >= player.depth) {
+
+                player.depth = Math.min(rows - 1, y + 1);
+
+                if (player.depth > 0) {
+                    player.hp = Math.min(100, player.hp + 5);
+                }
+            }
+        }
+
+        saveGame(false);
+    }
+    else {
+
+        showMessage(
+            "⛏️ " +
+            info.name +
+            " getroffen! " +
+            Math.round(block.hits) +
+            "/" +
+            info.hardness
+        );
+    }
+
+    renderWorld();
+}
+
+function goDeeper(y) {
+
+    if (y > player.depth) {
+
+        player.depth = y;
+        showMessage("⬇️ Du gehst tiefer: " + y + " m");
+
+        renderWorld();
+    }
+}
+
+function selectTool(tool) {
+
+    player.tool = tool;
+
+    document.querySelectorAll("button").forEach(b =>
+        b.classList.remove("active")
+    );
+
+    if (tool === "pickaxe")
+        document.getElementById("pickaxeBtn").classList.add("active");
+
+    if (tool === "shovel")
+        document.getElementById("shovelBtn").classList.add("active");
+
+    if (tool === "sword")
+        document.getElementById("swordBtn").classList.add("active");
+
+    updateUI();
+}
+
+function craft(item) {
+
+    const costs = {
+        helmet: 10,
+        chest: 20,
+        pants: 15,
+        boots: 10,
+        sword: 15
+    };
+
+    const cost = costs[item];
+
+    if (inventory.iron < cost) {
+
+        showMessage("❌ Du brauchst " + cost + " Eisen!");
+
+        return;
+    }
+
+    inventory.iron -= cost;
+
+    if (item === "helmet") {
+
+        player.equipment.helmet = true;
+        showMessage("🪖 Eisenhelm hergestellt!");
+    }
+
+    if (item === "chest") {
+
+        player.equipment.chest = true;
+        showMessage("🛡️ Brustplatte hergestellt!");
+    }
+
+    if (item === "pants") {
+
+        player.equipment.pants = true;
+        showMessage("👖 Eisenhose hergestellt!");
+    }
+
+    if (item === "boots") {
+
+        player.equipment.boots = true;
+        showMessage("👢 Eisenschuhe hergestellt!");
+    }
+
+    if (item === "sword") {
+
+        showMessage("⚔️ Eisenschwert hergestellt!");
+    }
+
+    updateUI();
+    saveGame(false);
+}
+
+function getArmor() {
+
+    let armor = 0;
+
+    if (player.equipment.helmet) armor += 15;
+    if (player.equipment.chest) armor += 35;
+    if (player.equipment.pants) armor += 25;
+    if (player.equipment.boots) armor += 15;
+
+    return armor;
+}
+
+function updateUI() {
+
+    document.getElementById("depthText").innerText =
+        player.depth;
+
+    document.getElementById("toolText").innerText =
+        player.tool === "pickaxe"
+        ? "Spitzhacke"
+        : player.tool === "shovel"
+        ? "Schaufel"
+        : "Schwert";
+
+    document.getElementById("hpBar").style.width =
+        player.hp + "%";
+
+    document.getElementById("armorBar").style.width =
+        getArmor() + "%";
+
+    document.getElementById("helmet").innerText =
+        player.equipment.helmet ? "Eisen" : "Leer";
+
+    document.getElementById("chest").innerText =
+        player.equipment.chest ? "Eisen" : "Leer";
+
+    document.getElementById("pants").innerText =
+        player.equipment.pants ? "Eisen" : "Leer";
+
+    document.getElementById("boots").innerText =
+        player.equipment.boots ? "Eisen" : "Leer";
+
+    const inv = document.getElementById("inventory");
+
+    inv.innerHTML = "";
+
+    const icons = {
+        dirt: "🟫",
+        stone: "⬜",
+        coal: "⚫",
+        iron: "🔩",
+        gold: "🟨",
+        diamond: "💎"
+    };
+
+    Object.keys(inventory).forEach(item => {
+
+        const div = document.createElement("div");
+
+        div.className = "inventoryItem";
+
+        div.innerHTML =
+            "<span>" +
+            icons[item] +
+            " " +
+            blockTypes[item].name +
+            "</span>" +
+            "<b>" +
+            inventory[item] +
+            "</b>";
+
+        inv.appendChild(div);
+    });
+}
+
+function showMessage(text) {
+
+    const msg = document.getElementById("message");
+
+    msg.innerText = text;
+    msg.style.display = "block";
+
+    clearTimeout(window.messageTimer);
+
+    window.messageTimer = setTimeout(() => {
+        msg.style.display = "none";
+    }, 1800);
+}
+
+function saveGame(show = true) {
+
+    localStorage.setItem(
+        "deepMinerSave",
+        JSON.stringify({
+            player,
+            inventory,
+            blocks
+        })
+    );
+
+    if (show) showMessage("💾 Spiel gespeichert!");
+}
+
+function loadGame() {
+
+    const data = localStorage.getItem("deepMinerSave");
+
+    if (!data) {
+
+        generateWorld();
+        return;
+    }
+
+    try {
+
+        const save = JSON.parse(data);
+
+        player = save.player;
+        inventory = save.inventory;
+        blocks = save.blocks;
+
+    } catch {
+
+        generateWorld();
+    }
+}
+
+function resetGame() {
+
+    if (!confirm("Wirklich ein neues Spiel starten?")) return;
+
+    localStorage.removeItem("deepMinerSave");
+
+    player = {
+        depth: 0,
+        hp: 100,
+        tool: "pickaxe",
+        equipment: {
+            helmet: false,
+            chest: false,
+            pants: false,
+            boots: false
+        }
+    };
+
+    inventory = {
+        dirt: 0,
+        stone: 0,
+        coal: 0,
+        iron: 0,
+        gold: 0,
+        diamond: 0
+    };
+
+    generateWorld();
+    renderWorld();
+
+    showMessage("🌎 Neues Spiel gestartet!");
+}
+
+document.addEventListener("keydown", e => {
+
+    if (e.key === "1") selectTool("pickaxe");
+    if (e.key === "2") selectTool("shovel");
+    if (e.key === "3") selectTool("sword");
+
+    if (e.key === "s") saveGame();
+});
+
+loadGame();
+renderWorld();
+selectTool(player.tool);
+
+</script>
+
+</body>
+</html>
