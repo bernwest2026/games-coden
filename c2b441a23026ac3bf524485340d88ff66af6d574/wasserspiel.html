@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wasserspiel</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #87ceeb;
+      text-align: center;
+    }
+
+    h1 {
+      color: white;
+      margin: 20px;
+    }
+
+    #score {
+      color: white;
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+
+    #wasser {
+      width: 90%;
+      max-width: 700px;
+      height: 400px;
+      margin: auto;
+      background: linear-gradient(#2196f3, #0066cc);
+      border: 5px solid white;
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .tropfen {
+      position: absolute;
+      width: 25px;
+      height: 25px;
+      background: #bdefff;
+      border-radius: 50%;
+      animation: schwimmen 2s infinite alternate;
+    }
+
+    @keyframes schwimmen {
+      from {
+        transform: translateY(0);
+      }
+      to {
+        transform: translateY(20px);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>💧 Wasser-Klick-Spiel 💧</h1>
+  <div id="score">Punkte: 0</div>
+
+  <div id="wasser"></div>
+
+  <script>
+    const wasser = document.getElementById("wasser");
+    const scoreText = document.getElementById("score");
+
+    let punkte = 0;
+
+    function neuerTropfen() {
+      const tropfen = document.createElement("div");
+      tropfen.className = "tropfen";
+
+      tropfen.style.left = Math.random() * 95 + "%";
+      tropfen.style.top = Math.random() * 90 + "%";
+
+      tropfen.onclick = function(event) {
+        event.stopPropagation();
+
+        punkte++;
+        scoreText.textContent = "Punkte: " + punkte;
+
+        tropfen.remove();
+
+        neuerTropfen();
+      };
+
+      wasser.appendChild(tropfen);
+    }
+
+    for (let i = 0; i < 10; i++) {
+      neuerTropfen();
+    }
+  </script>
+
+</body>
+</html>

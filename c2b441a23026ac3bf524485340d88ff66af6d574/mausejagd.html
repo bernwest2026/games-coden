@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐱 Katze jagt die Maus</title>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #8fd66f;
+      font-family: Arial, sans-serif;
+    }
+
+    #spiel {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #katze, #maus {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    #katze {
+      font-size: 70px;
+    }
+
+    #maus {
+      font-size: 45px;
+    }
+
+    #punkte {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 12px 25px;
+      border-radius: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      z-index: 10;
+    }
+
+    #start {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 18px 35px;
+      border: none;
+      border-radius: 20px;
+      background: #ff7b35;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 20;
+    }
+
+    #start:hover {
+      background: #ff5e12;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="spiel">
+
+    <div id="punkte">🐱 Punkte: 0</div>
+
+    <div id="katze">🐱</div>
+    <div id="maus">🐭</div>
+
+    <button id="start">Spiel starten!</button>
+
+  </div>
+
+  <script>
+    const katze = document.getElementById("katze");
+    const maus = document.getElementById("maus");
+    const punkteAnzeige = document.getElementById("punkte");
+    const startButton = document.getElementById("start");
+
+    let katzeX = window.innerWidth / 2;
+    let katzeY = window.innerHeight / 2;
+
+    let mausX = 200;
+    let mausY = 200;
+
+    let punkte = 0;
+    let gestartet = false;
+
+    // Maus an eine zufällige Stelle setzen
+    function neueMaus() {
+      mausX = Math.random() * (window.innerWidth - 100) + 50;
+      mausY = Math.random() * (window.innerHeight - 150) + 100;
+
+      maus.style.left = mausX + "px";
+      maus.style.top = mausY + "px";
+      maus.style.display = "block";
+    }
+
+    // Katze bewegen
+    document.addEventListener("mousemove", function(event) {
+
+      if (!gestartet) return;
+
+      katzeX = event.clientX;
+      katzeY = event.clientY;
+
+      katze.style.left = katzeX + "px";
+      katze.style.top = katzeY + "px";
+
+      // Abstand zwischen Katze und Maus
+      const abstand = Math.sqrt(
+        Math.pow(katzeX - mausX, 2) +
+        Math.pow(katzeY - mausY, 2)
+      );
+
+      // Wenn die Katze die Maus berührt
+      if (abstand < 55) {
+        maus.style.display = "none";
+
+        punkte++;
+        punkteAnzeige.textContent = "🐱 Punkte: " + punkte;
+
+        // Kleine Pause, dann neue Maus
+        setTimeout(() => {
+          neueMaus();
+        }, 300);
+      }
+    });
+
+    // Spiel starten
+    startButton.addEventListener("click", function() {
+      gestartet = true;
+      punkte = 0;
+
+      punkteAnzeige.textContent = "🐱 Punkte: 0";
+
+      startButton.style.display = "none";
+
+      katze.style.left = katzeX + "px";
+      katze.style.top = katzeY + "px";
+
+      neueMaus();
+    });
+  </script>
+
+</body>
+</html>
+

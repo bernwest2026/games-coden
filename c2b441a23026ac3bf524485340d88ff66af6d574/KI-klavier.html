@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Großes Klavier 🎹</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    background:
+        radial-gradient(circle at top, #444, #111 70%);
+
+    font-family: Arial, sans-serif;
+
+    overflow-x: auto;
+}
+
+
+/* Überschrift */
+
+h1 {
+    color: white;
+    font-size: 38px;
+    margin-bottom: 25px;
+
+    text-shadow:
+        0 3px 8px black;
+}
+
+
+/* Klavier-Gehäuse */
+
+.piano-container {
+
+    background: linear-gradient(
+        to bottom,
+        #222,
+        #050505
+    );
+
+    padding: 30px;
+
+    border-radius: 20px;
+
+    box-shadow:
+        0 20px 50px rgba(0,0,0,0.8),
+        inset 0 2px 2px #555;
+
+}
+
+
+/* Klavier */
+
+.piano {
+
+    position: relative;
+
+    display: flex;
+
+    height: 360px;
+
+    user-select: none;
+
+}
+
+
+/* Weiße Tasten */
+
+.white {
+
+    position: relative;
+
+    width: 75px;
+    height: 360px;
+
+    background:
+        linear-gradient(
+            to right,
+            #ddd,
+            #fff 25%,
+            #fff 75%,
+            #ccc
+        );
+
+    border: 2px solid #222;
+
+    border-radius:
+        0 0 10px 10px;
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+
+    padding-bottom: 22px;
+
+    color: #444;
+
+    font-size: 18px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.05s,
+        background 0.05s;
+
+}
+
+
+/* Weiße Taste Hover */
+
+.white:hover {
+
+    background: #f5f5f5;
+
+}
+
+
+/* Weiße Taste gedrückt */
+
+.white.pressed {
+
+    transform:
+        translateY(7px);
+
+    background: #ccc;
+
+}
+
+
+/* Schwarze Tasten */
+
+.black {
+
+    position: absolute;
+
+    top: 0;
+
+    width: 48px;
+    height: 225px;
+
+    z-index: 10;
+
+    background:
+        linear-gradient(
+            to right,
+            #000,
+            #222 40%,
+            #444 55%,
+            #000
+        );
+
+    border:
+        2px solid #000;
+
+    border-radius:
+        0 0 9px 9px;
+
+    box-shadow:
+        0 8px 10px rgba(0,0,0,0.7);
+
+    color: white;
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+
+    padding-bottom: 18px;
+
+    font-size: 15px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+}
+
+
+/* Schwarze Taste Hover */
+
+.black:hover {
+
+    background:
+        linear-gradient(
+            to right,
+            #111,
+            #555,
+            #111
+        );
+
+}
+
+
+/* Schwarze Taste gedrückt */
+
+.black.pressed {
+
+    transform:
+        translateY(7px);
+
+    background:
+        linear-gradient(
+            to right,
+            #000,
+            #111,
+            #000
+        );
+
+}
+
+
+/*
+   SCHWARZE TASTEN
+   Jede Oktave hat:
+
+   C# D#
+   F# G# A#
+*/
+
+
+/* Oktave 1 */
+
+.black.c1 {
+    left: 51px;
+}
+
+.black.d1 {
+    left: 126px;
+}
+
+.black.f1 {
+    left: 276px;
+}
+
+.black.g1 {
+    left: 351px;
+}
+
+.black.a1 {
+    left: 426px;
+}
+
+
+/* Oktave 2 */
+
+.black.c2 {
+    left: 501px;
+}
+
+.black.d2 {
+    left: 576px;
+}
+
+.black.f2 {
+    left: 726px;
+}
+
+.black.g2 {
+    left: 801px;
+}
+
+.black.a2 {
+    left: 876px;
+}
+
+
+/* Oktave 3 */
+
+.black.c3 {
+    left: 951px;
+}
+
+.black.d3 {
+    left: 1026px;
+}
+
+.black.f3 {
+    left: 1176px;
+}
+
+.black.g3 {
+    left: 1251px;
+}
+
+.black.a3 {
+    left: 1326px;
+}
+
+
+/* Erklärung */
+
+.info {
+
+    margin-top: 25px;
+
+    color: white;
+
+    font-size: 16px;
+
+    text-align: center;
+
+    opacity: 0.8;
+}
+
+
+/* Auf kleineren Bildschirmen */
+
+@media (max-width: 800px) {
+
+    h1 {
+        font-size: 28px;
+    }
+
+    .piano-container {
+        padding: 15px;
+    }
+
+}
+
+</style>
+</head>
+
+
+<body>
+
+
+<h1>🎹 Mein großes Klavier</h1>
+
+
+<div class="piano-container">
+
+<div class="piano">
+
+
+<!-- ========================= -->
+<!-- WEISSE TASTEN -->
+<!-- ========================= -->
+
+<div class="white" data-note="C3" data-key="q">Q</div>
+<div class="white" data-note="D3" data-key="w">W</div>
+<div class="white" data-note="E3" data-key="e">E</div>
+<div class="white" data-note="F3" data-key="r">R</div>
+<div class="white" data-note="G3" data-key="t">T</div>
+<div class="white" data-note="A3" data-key="y">Y</div>
+<div class="white" data-note="B3" data-key="u">U</div>
+
+<div class="white" data-note="C4" data-key="a">A</div>
+<div class="white" data-note="D4" data-key="s">S</div>
+<div class="white" data-note="E4" data-key="d">D</div>
+<div class="white" data-note="F4" data-key="f">F</div>
+<div class="white" data-note="G4" data-key="g">G</div>
+<div class="white" data-note="A4" data-key="h">H</div>
+<div class="white" data-note="B4" data-key="j">J</div>
+
+<div class="white" data-note="C5" data-key="z">Z</div>
+<div class="white" data-note="D5" data-key="x">X</div>
+<div class="white" data-note="E5" data-key="c">C</div>
+<div class="white" data-note="F5" data-key="v">V</div>
+<div class="white" data-note="G5" data-key="b">B</div>
+<div class="white" data-note="A5" data-key="n">N</div>
+<div class="white" data-note="B5" data-key="m">M</div>
+
+<div class="white" data-note="C6" data-key=",">,</div>
+
+
+<!-- ========================= -->
+<!-- SCHWARZE TASTEN -->
+<!-- ========================= -->
+
+<!-- Oktave 3 -->
+
+<div class="black c1"
+     data-note="C#3"
+     data-key="2">2</div>
+
+<div class="black d1"
+     data-note="D#3"
+     data-key="3">3</div>
+
+<div class="black f1"
+     data-note="F#3"
+     data-key="5">5</div>
+
+<div class="black g1"
+     data-note="G#3"
+     data-key="6">6</div>
+
+<div class="black a1"
+     data-note="A#3"
+     data-key="7">7</div>
+
+
+<!-- Oktave 4 -->
+
+<div class="black c2"
+     data-note="C#4"
+     data-key="8">8</div>
+
+<div class="black d2"
+     data-note="D#4"
+     data-key="9">9</div>
+
+<div class="black f2"
+     data-note="F#4"
+     data-key="i">I</div>
+
+<div class="black g2"
+     data-note="G#4"
+     data-key="o">O</div>
+
+<div class="black a2"
+     data-note="A#4"
+     data-key="p">P</div>
+
+
+<!-- Oktave 5 -->
+
+<div class="black c3"
+     data-note="C#5"
+     data-key="j">J</div>
+
+<div class="black d3"
+     data-note="D#5"
+     data-key="k">K</div>
+
+<div class="black f3"
+     data-note="F#5"
+     data-key="l">L</div>
+
+<div class="black g3"
+     data-note="G#5"
+     data-key="ö">Ö</div>
+
+<div class="black a3"
+     data-note="A#5"
+     data-key="ä">Ä</div>
+
+
+</div>
+
+</div>
+
+
+<div class="info">
+
+Klicke auf die Tasten oder benutze deine Tastatur 🎵
+
+</div>
+
+
+<script>
+
+
+/* ========================= */
+/* AUDIO */
+/* ========================= */
+
+let audioContext = null;
+
+
+const frequencies = {
+
+"C3": 130.81,
+"C#3": 138.59,
+"D3": 146.83,
+"D#3": 155.56,
+"E3": 164.81,
+"F3": 174.61,
+"F#3": 185.00,
+"G3": 196.00,
+"G#3": 207.65,
+"A3": 220.00,
+"A#3": 233.08,
+"B3": 246.94,
+
+"C4": 261.63,
+"C#4": 277.18,
+"D4": 293.66,
+"D#4": 311.13,
+"E4": 329.63,
+"F4": 349.23,
+"F#4": 369.99,
+"G4": 392.00,
+"G#4": 415.30,
+"A4": 440.00,
+"A#4": 466.16,
+"B4": 493.88,
+
+"C5": 523.25,
+"C#5": 554.37,
+"D5": 587.33,
+"D#5": 622.25,
+"E5": 659.25,
+"F5": 698.46,
+"F#5": 739.99,
+"G5": 783.99,
+"G#5": 830.61,
+"A5": 880.00,
+"A#5": 932.33,
+"B5": 987.77,
+
+"C6": 1046.50
+
+};
+
+
+/* ========================= */
+/* TON ABSPIELEN */
+/* ========================= */
+
+function playNote(note) {
+
+    if (!audioContext) {
+
+        audioContext =
+            new (window.AudioContext ||
+                 window.webkitAudioContext)();
+
+    }
+
+
+    if (audioContext.state === "suspended") {
+
+        audioContext.resume();
+
+    }
+
+
+    const oscillator =
+        audioContext.createOscillator();
+
+
+    const gain =
+        audioContext.createGain();
+
+
+    oscillator.type = "triangle";
+
+
+    oscillator.frequency.value =
+        frequencies[note];
+
+
+    gain.gain.setValueAtTime(
+        0.0001,
+        audioContext.currentTime
+    );
+
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.5,
+        audioContext.currentTime + 0.01
+    );
+
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        audioContext.currentTime + 1.5
+    );
+
+
+    oscillator.connect(gain);
+
+    gain.connect(
+        audioContext.destination
+    );
+
+
+    oscillator.start();
+
+
+    oscillator.stop(
+        audioContext.currentTime + 1.5
+    );
+
+}
+
+
+/* ========================= */
+/* TASTE DRÜCKEN */
+/* ========================= */
+
+function pressKey(key) {
+
+    if (!key) return;
+
+
+    const note =
+        key.dataset.note;
+
+
+    playNote(note);
+
+
+    key.classList.add("pressed");
+
+
+    setTimeout(() => {
+
+        key.classList.remove("pressed");
+
+    }, 120);
+
+}
+
+
+/* ========================= */
+/* MAUS / TOUCH */
+/* ========================= */
+
+document
+.querySelectorAll(".white, .black")
+.forEach(key => {
+
+    key.addEventListener(
+        "pointerdown",
+        function(event) {
+
+            event.preventDefault();
+
+            pressKey(this);
+
+        }
+    );
+
+});
+
+
+/* ========================= */
+/* COMPUTER-TASTATUR */
+/* ========================= */
+
+document.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (event.repeat) return;
+
+
+        const keyboardKey =
+            event.key.toLowerCase();
+
+
+        const key =
+            document.querySelector(
+                `[data-key="${keyboardKey}"]`
+            );
+
+
+        if (key) {
+
+            pressKey(key);
+
+        }
+
+    }
+);
+
+
+</script>
+
+</body>
+</html>
