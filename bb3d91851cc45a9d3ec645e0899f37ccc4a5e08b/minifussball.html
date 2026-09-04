@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Mini Fußball</title>
+<style>
+  body {
+    margin: 0;
+    background: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: Arial;
+  }
+
+  #game {
+    width: 800px;
+    height: 450px;
+    background: #299447;
+    border: 5px solid white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #goal {
+    position: absolute;
+    right: 0;
+    top: 150px;
+    width: 40px;
+    height: 150px;
+    background: white;
+  }
+
+  #player {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: blue;
+    border-radius: 50%;
+    left: 100px;
+    top: 210px;
+  }
+
+  #ball {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    left: 140px;
+    top: 216px;
+  }
+
+  #score {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="game">
+  <div id="score">Tore: 0</div>
+  <div id="goal"></div>
+  <div id="player"></div>
+  <div id="ball"></div>
+</div>
+
+<script>
+const player = document.getElementById("player");
+const ball = document.getElementById("ball");
+const scoreText = document.getElementById("score");
+
+let x = 100;
+let y = 210;
+let ballX = 140;
+let ballY = 216;
+let score = 0;
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowUp") y -= 10;
+  if (e.key === "ArrowDown") y += 10;
+  if (e.key === "ArrowLeft") x -= 10;
+  if (e.key === "ArrowRight") x += 10;
+
+  // Spieler im Spielfeld halten
+  x = Math.max(0, Math.min(770, x));
+  y = Math.max(0, Math.min(420, y));
+
+  player.style.left = x + "px";
+  player.style.top = y + "px";
+
+  // Schießen
+  if (e.code === "Space") {
+    ballX = x + 30;
+    ballY = y + 6;
+    ball.style.left = ballX + "px";
+    ball.style.top = ballY + "px";
+
+    let schuss = setInterval(() => {
+      ballX += 15;
+      ball.style.left = ballX + "px";
+
+      // Tor getroffen
+      if (ballX >= 760 && ballY > 150 && ballY < 300) {
+        score++;
+        scoreText.textContent = "Tore: " + score;
+
+        ballX = x + 30;
+        ballY = y + 6;
+        ball.style.left = ballX + "px";
+        ball.style.top = ballY + "px";
+
+        clearInterval(schuss);
+      }
+
+      // Ball raus
+      if (ballX > 800) {
+        ballX = x + 30;
+        ballY = y + 6;
+        ball.style.left = ballX + "px";
+        ball.style.top = ballY + "px";
+        clearInterval(schuss);
+      }
+    }, 30);
+  }
+});
+</script>
+
+</body>
+</html>
