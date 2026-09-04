@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏍️ Motorrad Spiel</title>
+
+<style>
+    body {
+        margin: 0;
+        background: #111;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    h1 {
+        margin: 10px;
+    }
+
+    #score {
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+
+    canvas {
+        background: #555;
+        border: 4px solid white;
+        border-radius: 10px;
+        max-width: 95vw;
+        height: auto;
+    }
+
+    button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 18px;
+        border: none;
+        border-radius: 8px;
+        background: #e11d48;
+        color: white;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #be123c;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>🏍️ Motorrad Racer</h1>
+<div id="score">Punkte: 0</div>
+
+<canvas id="game" width="500" height="700"></canvas>
+
+<br>
+<button onclick="restart()">🔄 Neustart</button>
+
+<p>← → oder A / D = Motorrad bewegen</p>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let keys = {};
+let score = 0;
+let gameOver = false;
+let speed = 5;
+
+const bike = {
+    x: 225,
+    y: 590,
+    width: 50,
+    height: 80,
+    speed: 7
+};
+
+let enemies = [];
+
+document.addEventListener("keydown", e => {
+    keys[e.key.toLowerCase()] = true;
+
+    if (gameOver && e.key === "Enter") {
+        restart();
+    }
+});
+
+document.addEventListener("keyup", e => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+function spawnEnemy() {
+    const lanes = [125, 225, 325];
+    const lane = lanes[Math.floor(Math.random() * lanes.length)];
+
+    enemies.push({
+        x: lane,
+        y: -100,
+        width: 50,
+        height: 80,
+        color: ["#2563eb", "#dc2626", "#f59e0b"][Math.floor(Math.random() * 3)]
+    });
+}
+
+function updateBike() {
+    if (keys["arrowleft"] || keys["a"]) {
+        bike.x -= bike.speed;
+    }
+
+    if (keys["arrowright"] || keys["d"]) {
+        bike.x += bike.speed;
+    }
+
+    // Begrenzung der Straße
+    bike.x = Math.max(75, Math.min(375, bike.x));
+}
+
+function updateEnemies() {
+    for (let enemy of enemies) {
+        enemy.y += speed;
+    }
+
+    enemies = enemies.filter(enemy => enemy.y < 800);
+
+    if (Math.random() < 0.025) {
+        spawnEnemy();
+    }
+}
+
+function collision(a, b) {
+    return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+    );
+}
+
+function checkCollisions() {
+    for (let enemy of enemies) {
+        if (collision(bike, enemy)) {
+            gameOver = true;
+        }
+    }
+}
+
+function drawRoad() {
+    // Gras
+    ctx.fillStyle = "#16803c";
+    ctx.fillRect(0, 0, 500, 700);
+
+    // Straße
+    ctx.fillStyle = "#333";
+    ctx.fillRect(50, 0, 400, 700);
+
+    // Straßenrand
+    ctx.fillStyle = "#eee";
+    ctx.fillRect(50, 0, 8, 700);
+    ctx.fillRect(442, 0, 8, 700);
+
+    // Fahrbahnmarkierungen
+    ctx.fillStyle = "white";
+
+    let offset = (score * speed * 0.5) % 80;
+
+    for (let y = -80 + offset; y < 700; y += 80) {
+        ctx.fillRect(190, y, 8, 45);
+        ctx.fillRect(302, y, 8, 45);
+    }
+}
+
+function drawBike() {
+    // Reifen
+    ctx.fillStyle = "#111";
+
+    ctx.fillRect(
+        bike.x + 17,
+        bike.y,
+        16,
+        20
+    );
+
+    ctx.fillRect(
+        bike.x + 17,
+        bike.y + 60,
+        16,
+        20
+    );
+
+    // Motorrad
+    ctx.fillStyle = "#ef4444";
+
+    ctx.beginPath();
+    ctx.roundRect(
+        bike.x + 8,
+        bike.y + 15,
+        34,
+        50,
+        12
+    );
+    ctx.fill();
+
+    // Sitz
+    ctx.fillStyle = "#111";
+    ctx.fillRect(
+        bike.x + 12,
+        bike.y + 35,
+        26,
+        22
+    );
+
+    // Fahrerhelm
+    ctx.fillStyle = "#fbbf24";
+
+    ctx.beginPath();
+    ctx.arc(
+        bike.x + 25,
+        bike.y + 22,
+        10,
+        0,
+        Math.PI * 2
+    );
+    ctx.fill();
+}
+
+function drawEnemy(enemy) {
+    // Reifen
+    ctx.fillStyle = "#111";
+
+    ctx.fillRect(enemy.x + 5, enemy.y + 8, 8, 25);
+    ctx.fillRect(enemy.x + enemy.width - 13, enemy.y + 8, 8, 25);
+    ctx.fillRect(enemy.x + 5, enemy.y + 48, 8, 25);
+    ctx.fillRect(enemy.x + enemy.width - 13, enemy.y + 48, 8, 25);
+
+    // Auto
+    ctx.fillStyle = enemy.color;
+
+    ctx.fillRect(
+        enemy.x,
+        enemy.y + 10,
+        enemy.width,
+        60
+    );
+
+    // Fenster
+    ctx.fillStyle = "#9ca3af";
+
+    ctx.fillRect(
+        enemy.x + 8,
+        enemy.y + 18,
+        34,
+        18
+    );
+
+    // Lichter
+    ctx.fillStyle = "#fde047";
+    ctx.fillRect(enemy.x + 5, enemy.y + 60, 10, 7);
+    ctx.fillRect(enemy.x + 35, enemy.y + 60, 10, 7);
+}
+
+function draw() {
+    drawRoad();
+
+    for (let enemy of enemies) {
+        drawEnemy(enemy);
+    }
+
+    drawBike();
+
+    if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(0, 0, 500, 700);
+
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+
+        ctx.font = "bold 45px Arial";
+        ctx.fillText("GAME OVER", 250, 320);
+
+        ctx.font = "24px Arial";
+        ctx.fillText(
+            "Punkte: " + Math.floor(score),
+            250,
+            365
+        );
+
+        ctx.font = "18px Arial";
+        ctx.fillText(
+            "Enter oder Neustart drücken",
+            250,
+            410
+        );
+    }
+}
+
+function update() {
+    if (!gameOver) {
+        updateBike();
+        updateEnemies();
+        checkCollisions();
+
+        score += 0.05;
+
+        // Spiel wird langsam schneller
+        speed = 5 + score / 100;
+
+        document.getElementById("score").textContent =
+            "Punkte: " + Math.floor(score);
+    }
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+function restart() {
+    bike.x = 225;
+    enemies = [];
+    score = 0;
+    speed = 5;
+    gameOver = false;
+}
+
+gameLoop();
+</script>
+
+</body>
+</html>

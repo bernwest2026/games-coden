@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚽ Fußballspiel</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background: #111827;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    h1 {
+        margin: 12px 0 5px;
+    }
+
+    #score {
+        font-size: 26px;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+
+    canvas {
+        display: block;
+        margin: auto;
+        background: #159447;
+        border: 4px solid white;
+        border-radius: 12px;
+        max-width: 95vw;
+        max-height: 75vh;
+    }
+
+    #info {
+        margin-top: 8px;
+        color: #d1d5db;
+    }
+
+    button {
+        margin-top: 10px;
+        padding: 10px 20px;
+        border: 0;
+        border-radius: 8px;
+        background: #2563eb;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #1d4ed8;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>⚽ Mini Fußball</h1>
+<div id="score">🔵 0 : 0 🔴</div>
+
+<canvas id="game" width="1000" height="600"></canvas>
+
+<div id="info">
+    WASD / Pfeiltasten = Bewegen | Leertaste = Schießen
+</div>
+
+<button onclick="restart()">Neustart</button>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const W = canvas.width;
+const H = canvas.height;
+
+let keys = {};
+let blueScore = 0;
+let redScore = 0;
+
+document.addEventListener("keydown", e => {
+    keys[e.key.toLowerCase()] = true;
+
+    if (e.code === "Space") {
+        e.preventDefault();
+        shoot();
+    }
+});
+
+document.addEventListener("keyup", e => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+const player = {
+    x: 250,
+    y: H / 2,
+    r: 22,
+    speed: 4,
+    color: "#2563eb"
+};
+
+const enemy = {
+    x: 750,
+    y: H / 2,
+    r: 22,
+    speed: 2.3,
+    color: "#dc2626"
+};
+
+const ball = {
+    x: W / 2,
+    y: H / 2,
+    r: 11,
+    vx: 0,
+    vy: 0
+};
+
+function resetPositions() {
+    player.x = 250;
+    player.y = H / 2;
+
+    enemy.x = 750;
+    enemy.y = H / 2;
+
+    ball.x = W / 2;
+    ball.y = H / 2;
+    ball.vx = 0;
+    ball.vy = 0;
+}
+
+function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function shoot() {
+    if (distance(player, ball) < 65) {
+        let dx = ball.x - player.x;
+        let dy = ball.y - player.y;
+
+        let len = Math.hypot(dx, dy);
+
+        if (len === 0) {
+            dx = 1;
+            dy = 0;
+            len = 1;
+        }
+
+        ball.vx = dx / len * 10;
+        ball.vy = dy / len * 10;
+    }
+}
+
+function movePlayer() {
+    let dx = 0;
+    let dy = 0;
+
+    if (keys["w"] || keys["arrowup"]) dy--;
+    if (keys["s"] || keys["arrowdown"]) dy++;
+    if (keys["a"] || keys["arrowleft"]) dx--;
+    if (keys["d"] || keys["arrowright"]) dx++;
+
+    if (dx !== 0 || dy !== 0) {
+        let len = Math.hypot(dx, dy);
+        dx /= len;
+        dy /= len;
+
+        player.x += dx * player.speed;
+        player.y += dy * player.speed;
+    }
+
+    player.x = Math.max(35, Math.min(W - 35, player.x));
+    player.y = Math.max(35, Math.min(H - 35, player.y));
+}
+
+function moveEnemy() {
+    let dx = ball.x - enemy.x;
+    let dy = ball.y - enemy.y;
+
+    let len = Math.hypot(dx, dy);
+
+    if (len > 1) {
+        enemy.x += dx / len * enemy.speed;
+        enemy.y += dy / len * enemy.speed;
+    }
+
+    enemy.x = Math.max(35, Math.min(W - 35, enemy.x));
+    enemy.y = Math.max(35, Math.min(H - 35, enemy.y));
+
+    // Gegner schießt automatisch
+    if (distance(enemy, ball) < 50) {
+        let dx = 0 - enemy.x;
+        let dy = H / 2 - enemy.y;
+        let len = Math.hypot(dx, dy);
+
+        ball.vx = dx / len * 7;
+        ball.vy = dy / len * 7;
+    }
+}
+
+function playerBallCollision(p) {
+    let dx = ball.x - p.x;
+    let dy = ball.y - p.y;
+    let len = Math.hypot(dx, dy);
+
+    if (len < p.r + ball.r) {
+        if (len === 0) len = 1;
+
+        let push = (p.r + ball.r - len);
+
+        ball.x += dx / len * push;
+        ball.y += dy / len * push;
+
+        ball.vx += dx / len * 0.8;
+        ball.vy += dy / len * 0.8;
+    }
+}
+
+function updateBall() {
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    ball.vx *= 0.985;
+    ball.vy *= 0.985;
+
+    // obere/untere Bande
+    if (ball.y - ball.r < 20) {
+        ball.y = 20 + ball.r;
+        ball.vy *= -0.8;
+    }
+
+    if (ball.y + ball.r > H - 20) {
+        ball.y = H - 20 - ball.r;
+        ball.vy *= -0.8;
+    }
+
+    // Seiten außerhalb des Tors
+    if (ball.x - ball.r < 20 &&
+        (ball.y < H/2 - 80 || ball.y > H/2 + 80)) {
+        ball.x = 20 + ball.r;
+        ball.vx *= -0.8;
+    }
+
+    if (ball.x + ball.r > W - 20 &&
+        (ball.y < H/2 - 80 || ball.y > H/2 + 80)) {
+        ball.x = W - 20 - ball.r;
+        ball.vx *= -0.8;
+    }
+
+    // Tor links
+    if (ball.x < 0) {
+        redScore++;
+        updateScore();
+        resetPositions();
+    }
+
+    // Tor rechts
+    if (ball.x > W) {
+        blueScore++;
+        updateScore();
+        resetPositions();
+    }
+}
+
+function updateScore() {
+    document.getElementById("score").textContent =
+        `🔵 ${blueScore} : ${redScore} 🔴`;
+}
+
+function drawField() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Rasen
+    ctx.fillStyle = "#159447";
+    ctx.fillRect(0, 0, W, H);
+
+    // Streifen
+    for (let i = 0; i < 10; i++) {
+        if (i % 2 === 0) {
+            ctx.fillStyle = "rgba(255,255,255,0.04)";
+            ctx.fillRect(i * 100, 0, 100, H);
+        }
+    }
+
+    // Außenlinie
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(20, 20, W - 40, H - 40);
+
+    // Mittellinie
+    ctx.beginPath();
+    ctx.moveTo(W/2, 20);
+    ctx.lineTo(W/2, H-20);
+    ctx.stroke();
+
+    // Mittelkreis
+    ctx.beginPath();
+    ctx.arc(W/2, H/2, 80, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Mittelpunkt
+    ctx.beginPath();
+    ctx.arc(W/2, H/2, 5, 0, Math.PI * 2);
+    ctx.fillStyle = "white";
+    ctx.fill();
+
+    // Strafräume
+    ctx.strokeRect(20, H/2 - 140, 140, 280);
+    ctx.strokeRect(W - 160, H/2 - 140, 140, 280);
+
+    // Tore
+    ctx.fillStyle = "#eee";
+
+    ctx.fillRect(-5, H/2 - 80, 25, 160);
+    ctx.fillRect(W - 20, H/2 - 80, 25, 160);
+}
+
+function drawPlayer(p, label) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+
+    ctx.fillStyle = p.color;
+    ctx.fill();
+
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(label, p.x, p.y + 5);
+}
+
+function drawBall() {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+
+    ctx.fillStyle = "white";
+    ctx.fill();
+
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // kleines schwarzes Muster
+    ctx.fillStyle = "#222";
+
+    for (let i = 0; i < 5; i++) {
+        let angle = i * Math.PI * 2 / 5;
+
+        ctx.beginPath();
+        ctx.arc(
+            ball.x + Math.cos(angle) * 5,
+            ball.y + Math.sin(angle) * 5,
+            2,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
+    }
+}
+
+function gameLoop() {
+    movePlayer();
+    moveEnemy();
+
+    playerBallCollision(player);
+    playerBallCollision(enemy);
+
+    updateBall();
+
+    drawField();
+    drawPlayer(player, "DU");
+    drawPlayer(enemy, "CPU");
+    drawBall();
+
+    requestAnimationFrame(gameLoop);
+}
+
+function restart() {
+    blueScore = 0;
+    redScore = 0;
+    updateScore();
+    resetPositions();
+}
+
+resetPositions();
+gameLoop();
+</script>
+
+</body>
+</html>
+
