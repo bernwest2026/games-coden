@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mystery Detective</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        background: #080b12;
+        color: #e8edf5;
+        font-family: Arial, sans-serif;
+    }
+
+    header {
+        padding: 20px;
+        text-align: center;
+        background: #101622;
+        border-bottom: 2px solid #273247;
+    }
+
+    h1 {
+        margin: 0;
+        color: #5ee7ff;
+    }
+
+    .subtitle {
+        color: #8e9aab;
+        margin-top: 8px;
+    }
+
+    #game {
+        width: min(1000px, 94%);
+        margin: 25px auto;
+    }
+
+    .stats {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+    }
+
+    .stat {
+        background: #111827;
+        padding: 12px 18px;
+        border-radius: 10px;
+        border: 1px solid #263248;
+    }
+
+    .stat strong {
+        color: #5ee7ff;
+    }
+
+    .locations {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+    }
+
+    button {
+        border: 0;
+        border-radius: 10px;
+        padding: 15px;
+        font-size: 16px;
+        cursor: pointer;
+        background: #172235;
+        color: white;
+        border: 1px solid #30415d;
+        transition: .2s;
+    }
+
+    button:hover {
+        background: #223453;
+        transform: translateY(-2px);
+    }
+
+    .location {
+        min-height: 120px;
+    }
+
+    .location span {
+        display: block;
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+
+    #panel {
+        margin-top: 20px;
+        padding: 22px;
+        background: #111827;
+        border: 1px solid #2b3950;
+        border-radius: 12px;
+        min-height: 170px;
+    }
+
+    #panel h2 {
+        margin-top: 0;
+        color: #5ee7ff;
+    }
+
+    .clue {
+        padding: 12px;
+        margin: 10px 0;
+        background: #0c111b;
+        border-left: 4px solid #5ee7ff;
+        border-radius: 5px;
+    }
+
+    #evidence {
+        margin-top: 20px;
+        padding: 20px;
+        background: #101622;
+        border-radius: 12px;
+    }
+
+    .evidence-item {
+        margin: 8px 0;
+        padding: 10px;
+        background: #171f2e;
+        border-radius: 6px;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    #endScreen {
+        text-align: center;
+        padding: 35px;
+        background: #111827;
+        border: 2px solid #5ee7ff;
+        border-radius: 15px;
+        margin-top: 20px;
+    }
+
+    .success {
+        color: #62ff9b;
+    }
+
+    .warning {
+        color: #ffd166;
+    }
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🕵️ MYSTERY DETECTIVE</h1>
+    <div class="subtitle">
+        Ein fiktives Ermittlungsabenteuer über ein geheimes Netzwerk
+    </div>
+</header>
+
+<div id="game">
+
+    <div class="stats">
+        <div class="stat">🔎 Hinweise: <strong id="clueCount">0</strong>/8</div>
+        <div class="stat">⭐ Punkte: <strong id="score">0</strong></div>
+        <div class="stat">📁 Akten: <strong id="files">0</strong></div>
+    </div>
+
+    <div class="locations">
+
+        <button class="location" onclick="investigate('office')">
+            <span>🏢</span>
+            Büro
+        </button>
+
+        <button class="location" onclick="investigate('archive')">
+            <span>🗄️</span>
+            Archiv
+        </button>
+
+        <button class="location" onclick="investigate('airport')">
+            <span>✈️</span>
+            Flughafen
+        </button>
+
+        <button class="location" onclick="investigate('island')">
+            <span>🏝️</span>
+            Privates Anwesen
+        </button>
+
+        <button class="location" onclick="investigate('computer')">
+            <span>💻</span>
+            Computer
+        </button>
+
+        <button class="location" onclick="investigate('library')">
+            <span>📚</span>
+            Bibliothek
+        </button>
+
+    </div>
+
+    <div id="panel">
+        <h2>Ermittlung starten</h2>
+        <p>
+            Wähle einen Ort aus und untersuche ihn nach Hinweisen.
+            Einige Hinweise ergeben erst zusammen ein klares Bild.
+        </p>
+    </div>
+
+    <div id="evidence">
+        <h2>📋 Beweismappe</h2>
+        <div id="evidenceList">
+            Noch keine Beweise gesammelt.
+        </div>
+    </div>
+
+    <div id="endScreen" class="hidden">
+        <h2 class="success">Fall gelöst!</h2>
+        <p>
+            Du hast genügend Hinweise gesammelt und die wichtigsten
+            Zusammenhänge erkannt.
+        </p>
+
+        <h3>Dein Ergebnis</h3>
+        <p id="finalScore"></p>
+
+        <button onclick="location.reload()">🔄 Nochmal spielen</button>
+    </div>
+
+</div>
+
+<script>
+const clues = [
+    {
+        id: "office",
+        title: "🏢 Das Büro",
+        text: "In einem verschlossenen Schrank findest du mehrere Kalenderseiten. Mehrere Termine überschneiden sich auffällig.",
+        clue: "Kalender mit ungewöhnlichen Terminüberschneidungen.",
+        points: 100
+    },
+    {
+        id: "archive",
+        title: "🗄️ Das Archiv",
+        text: "Zwischen alten Akten liegt eine Liste mit anonymisierten Kontakten und verschiedenen Zeitstempeln.",
+        clue: "Anonymisierte Kontaktliste mit Zeitstempeln.",
+        points: 120
+    },
+    {
+        id: "airport",
+        title: "✈️ Der Flughafen",
+        text: "Eine alte Flugliste zeigt mehrere Reisen, die mit den Terminen aus dem Büro übereinstimmen.",
+        clue: "Flugliste mit passenden Zeitangaben.",
+        points: 150
+    },
+    {
+        id: "island",
+        title: "🏝️ Das Anwesen",
+        text: "Du findest einen Grundriss des Anwesens. Einige Räume sind auf dem offiziellen Plan nicht eingezeichnet.",
+        clue: "Unvollständiger Gebäudeplan.",
+        points: 130
+    },
+    {
+        id: "computer",
+        title: "💻 Der Computer",
+        text: "Auf einem alten Rechner befindet sich eine verschlüsselte Datei. Der Dateiname entspricht einem Eintrag aus dem Archiv.",
+        clue: "Verschlüsselte Datei mit passendem Aktennamen.",
+        points: 180
+    },
+    {
+        id: "library",
+        title: "📚 Die Bibliothek",
+        text: "In einem Buch findest du eine handschriftliche Notiz, die auf einen Treffpunkt und ein Datum verweist.",
+        clue: "Handschriftliche Notiz mit Treffpunkt und Datum.",
+        points: 140
+    }
+];
+
+let collected = [];
+let score = 0;
+let files = 0;
+
+function investigate(id) {
+
+    const data = clues.find(c => c.id === id);
+
+    if (!data) return;
+
+    const panel = document.getElementById("panel");
+
+    if (collected.includes(id)) {
+        panel.innerHTML = `
+            <h2>${data.title}</h2>
+            <p>${data.text}</p>
+            <div class="clue">
+                ✅ Diesen Hinweis hast du bereits gesichert.
+            </div>
+        `;
+        return;
+    }
+
+    collected.push(id);
+    score += data.points;
+
+    if (id === "archive" || id === "computer") {
+        files++;
+    }
+
+    panel.innerHTML = `
+        <h2>${data.title}</h2>
+        <p>${data.text}</p>
+
+        <div class="clue">
+            🔎 <strong>Neuer Beweis:</strong><br>
+            ${data.clue}
+        </div>
+
+        <p class="success">
+            +${data.points} Punkte
+        </p>
+    `;
+
+    updateEvidence();
+
+    if (collected.length >= 6) {
+        setTimeout(finishGame, 700);
+    }
+}
+
+function updateEvidence() {
+
+    document.getElementById("clueCount").textContent = collected.length;
+    document.getElementById("score").textContent = score;
+    document.getElementById("files").textContent = files;
+
+    const list = document.getElementById("evidenceList");
+
+    list.innerHTML = "";
+
+    collected.forEach(id => {
+
+        const data = clues.find(c => c.id === id);
+
+        const item = document.createElement("div");
+
+        item.className = "evidence-item";
+
+        item.innerHTML = `
+            <strong>${data.title}</strong><br>
+            ${data.clue}
+        `;
+
+        list.appendChild(item);
+    });
+}
+
+function finishGame() {
+
+    document.getElementById("endScreen").classList.remove("hidden");
+
+    document.getElementById("finalScore").innerHTML =
+        `Du hast <strong>${score}</strong> Punkte erreicht
+        und ${collected.length} Hinweise gefunden.`;
+
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth"
+    });
+}
+</script>
+
+</body>
+</html>
