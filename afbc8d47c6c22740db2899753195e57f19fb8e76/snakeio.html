@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake.io</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: linear-gradient(#6fcf55, #3e9d3c);
+        font-family: Arial, sans-serif;
+        user-select: none;
+    }
+
+    #game {
+        display: block;
+        background:
+            radial-gradient(circle, rgba(255,255,255,.12) 2px, transparent 2px);
+        background-size: 35px 35px;
+    }
+
+    #score {
+        position: fixed;
+        top: 20px;
+        left: 25px;
+        color: white;
+        font-size: 28px;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px #333;
+        z-index: 5;
+    }
+
+    #message {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        color: white;
+        text-align: center;
+        text-shadow: 2px 2px 5px #333;
+        z-index: 10;
+        background: rgba(0,0,0,.25);
+    }
+
+    #message h1 {
+        font-size: 70px;
+        margin: 0 0 10px;
+    }
+
+    #message p {
+        font-size: 24px;
+    }
+
+    button {
+        padding: 15px 35px;
+        font-size: 22px;
+        border: 0;
+        border-radius: 12px;
+        background: #ffcc00;
+        color: #222;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 5px 0 #b58f00;
+    }
+
+    button:active {
+        transform: translateY(4px);
+        box-shadow: 0 1px 0 #b58f00;
+    }
+</style>
+</head>
+
+<body>
+
+<div id="score">Score: 0</div>
+<canvas id="game"></canvas>
+
+<div id="message">
+    <h1>🐍 Snake.io</h1>
+    <p>Steuere deine Schlange mit den Pfeiltasten</p>
+    <button onclick="startGame()">START</button>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreText = document.getElementById("score");
+const message = document.getElementById("message");
+
+let W, H;
+let snake;
+let enemies;
+let foods;
+let direction;
+let nextDirection;
+let score;
+let gameRunning = false;
+let lastTime = 0;
+let spawnTimer = 0;
+
+const FOOD_COUNT = 80;
+const ENEMY_COUNT = 5;
+const SPEED = 150;
+
+function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+function randomFood() {
+    return {
+        x: 40 + Math.random() * (W - 80),
+        y: 40 + Math.random() * (H - 80),
+        r: 6 + Math.random() * 6,
+        color: ["#ff4757", "#ffd32a", "#1dd1a1", "#54a0ff", "#ff9ff3"][Math.floor(Math.random()*5)]
+    };
+}
+
+function createSnake(x, y, color, length) {
+    let body = [];
+
+    for (let i = 0; i < length; i++) {
+        body.push({
+            x: x - i * 12,
+            y: y
+        });
+    }
+
+    return {
+        body,
+        color,
+        angle: Math.random() * Math.PI * 2,
+        speed: 1.2 + Math.random() * .7
+    };
+}
+
+function startGame() {
+    snake = createSnake(W / 2, H / 2, "#f5d90a", 12);
+
+    enemies = [];
+
+    for (let i = 0; i < ENEMY_COUNT; i++) {
+        enemies.push(
+            createSnake(
+                Math.random() * W,
+                Math.random() * H,
+                ["#ff4d4d", "#8e44ad", "#00cec9", "#ff7f50", "#2ecc71"][i],
+                8 + Math.floor(Math.random() * 12)
+            )
+        );
+    }
+
+    foods = [];
+    for (let i = 0; i < FOOD_COUNT; i++) {
+        foods.push(randomFood());
+    }
+
+    direction = { x: 1, y: 0 };
+    nextDirection = { x: 1, y: 0 };
+    score = 0;
+    spawnTimer = 0;
+    gameRunning = true;
+
+    message.style.display = "none";
+    scoreText.textContent = "Score: 0";
+
+    requestAnimationFrame(loop);
+}
+
+window.addEventListener("keydown", e => {
+    if (!gameRunning) return;
+
+    if (e.key === "ArrowUp" && direction.y !== 1)
+        nextDirection = {x:0, y:-1};
+
+    if (e.key === "ArrowDown" && direction.y !== -1)
+        nextDirection = {x:0, y:1};
+
+    if (e.key === "ArrowLeft" && direction.x !== 1)
+        nextDirection = {x:-1, y:0};
+
+    if (e.key === "ArrowRight" && direction.x !== -1)
+        nextDirection = {x:1, y:0};
+});
+
+function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function eatFood(s) {
+    for (let i = foods.length - 1; i >= 0; i--) {
+        if (distance(s.body[0], foods[i]) < 20) {
+            foods.splice(i, 1);
+
+            // Schlange wächst
+            let tail = s.body[s.body.length - 1];
+
+            for (let j = 0; j < 3; j++) {
+                s.body.push({
+                    x: tail.x,
+                    y: tail.y
+                });
+            }
+
+            if (s === snake) {
+                score += 10;
+                scoreText.textContent = "Score: " + score;
+            }
+        }
+    }
+}
+
+function updatePlayer() {
+    direction = nextDirection;
+
+    const head = snake.body[0];
+
+    let nx = head.x + direction.x * 3;
+    let ny = head.y + direction.y * 3;
+
+    // Bildschirmrand: auf der anderen Seite erscheinen
+    if (nx < 0) nx = W;
+    if (nx > W) nx = 0;
+    if (ny < 0) ny = H;
+    if (ny > H) ny = 0;
+
+    snake.body.unshift({x:nx, y:ny});
+    snake.body.pop();
+
+    eatFood(snake);
+}
+
+function updateEnemy(enemy) {
+    const head = enemy.body[0];
+
+    // Gegner suchen zufällige Richtung
+    enemy.angle += (Math.random() - .5) * .12;
+
+    // Manchmal auf Essen zielen
+    let closest = null;
+    let closestDist = 220;
+
+    for (const food of foods) {
+        const d = distance(head, food);
+        if (d < closestDist) {
+            closestDist = d;
+            closest = food;
+        }
+    }
+
+    if (closest) {
+        enemy.angle = Math.atan2(
+            closest.y - head.y,
+            closest.x - head.x
+        );
+    }
+
+    let nx = head.x + Math.cos(enemy.angle) * enemy.speed * 2;
+    let ny = head.y + Math.sin(enemy.angle) * enemy.speed * 2;
+
+    if (nx < 0 || nx > W) enemy.angle = Math.PI - enemy.angle;
+    if (ny < 0 || ny > H) enemy.angle = -enemy.angle;
+
+    nx = Math.max(0, Math.min(W, nx));
+    ny = Math.max(0, Math.min(H, ny));
+
+    enemy.body.unshift({x:nx, y:ny});
+    enemy.body.pop();
+
+    eatFood(enemy);
+}
+
+function checkCollision() {
+    const head = snake.body[0];
+
+    // Mit Gegnern kollidieren
+    for (const enemy of enemies) {
+        for (let i = 2; i < enemy.body.length; i++) {
+            if (distance(head, enemy.body[i]) < 12) {
+                gameOver();
+                return;
+            }
+        }
+    }
+
+    // Mit eigener Schlange kollidieren
+    for (let i = 10; i < snake.body.length; i++) {
+        if (distance(head, snake.body[i]) < 10) {
+            gameOver();
+            return;
+        }
+    }
+}
+
+function drawSnake(s) {
+    // Körper
+    for (let i = s.body.length - 1; i >= 0; i--) {
+        const part = s.body[i];
+
+        ctx.beginPath();
+        ctx.arc(part.x, part.y, 10, 0, Math.PI * 2);
+
+        if (i === 0) {
+            ctx.fillStyle = "#fff";
+        } else {
+            ctx.fillStyle = s.color;
+        }
+
+        ctx.fill();
+    }
+
+    // Kopf
+    const head = s.body[0];
+
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, 13, 0, Math.PI * 2);
+    ctx.fillStyle = s.color;
+    ctx.fill();
+
+    // Augen
+    let eyeX = Math.cos(s.angle || 0) * 5;
+    let eyeY = Math.sin(s.angle || 0) * 5;
+
+    if (s === snake) {
+        eyeX = direction.x * 5;
+        eyeY = direction.y * 5;
+    }
+
+    ctx.fillStyle = "white";
+
+    ctx.beginPath();
+    ctx.arc(head.x + eyeX - 3, head.y + eyeY - 3, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(head.x + eyeX + 3, head.y + eyeY + 3, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#111";
+
+    ctx.beginPath();
+    ctx.arc(head.x + eyeX - 3, head.y + eyeY - 3, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(head.x + eyeX + 3, head.y + eyeY + 3, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+}
+
+function drawFood() {
+    for (const food of foods) {
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = food.color;
+
+        ctx.beginPath();
+        ctx.arc(food.x, food.y, food.r, 0, Math.PI * 2);
+        ctx.fillStyle = food.color;
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    drawFood();
+
+    for (const enemy of enemies) {
+        drawSnake(enemy);
+    }
+
+    drawSnake(snake);
+}
+
+function gameOver() {
+    gameRunning = false;
+
+    message.style.display = "flex";
+    message.innerHTML = `
+        <h1>💀 Game Over</h1>
+        <p>Dein Score: ${score}</p>
+        <button onclick="startGame()">NOCHMAL SPIELEN</button>
+    `;
+}
+
+function loop(time) {
+    if (!gameRunning) return;
+
+    if (time - lastTime > 16) {
+        updatePlayer();
+
+        for (const enemy of enemies) {
+            updateEnemy(enemy);
+        }
+
+        checkCollision();
+
+        // Neue Nahrung
+        spawnTimer += 16;
+
+        if (spawnTimer > 800 && foods.length < FOOD_COUNT) {
+            foods.push(randomFood());
+            spawnTimer = 0;
+        }
+
+        draw();
+        lastTime = time;
+    }
+
+    requestAnimationFrame(loop);
+}
+</script>
+
+</body>
+</html>
+ 
