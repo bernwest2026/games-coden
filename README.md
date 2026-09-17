@@ -1,7 +1,7 @@
 # games-coden
 so kompliziert ist das gar nicht
 
-gehe JETZT auf die website [[weisizoni.ch]]
+gehe JETZT auf die Website [weisizoni.ch](https://weisizoni.ch/)
 
 Um deine Dateien holen zu können:
 1. Öffne den computer unter Linux (Ubuntu)
