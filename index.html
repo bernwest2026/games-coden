@@ -1,9 +1,46 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>weisizoni</title>
-  </head>
-  <body>
-    <img src="web/feuerwanze.jpg">
-  </body>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Archive</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@400;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="title-banner-wrap">
+  <img class="title-banner" src="assets/firebug.jpg" alt="Site title banner">
+</div>
+
+<main>
+
+  <section id="subdirectory-search">
+    <div class="section-heading"><h2>Finde deine Projekte</h2></div>
+    <div class="card">
+      <p class="hint">Schreib hier deinen Vor- und Nachnamen in das Textfeld. Alles kleingeschrieben und ohne Lücke.</p>
+      <form id="subdir-form" class="search-row">
+        <label for="subdir-input" class="sr-only">Subdirectory path</label>
+        <input type="text" id="subdir-input" name="subdir" placeholder="z.B. oliversantschi" autocomplete="off">
+        <button type="submit">Los!</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="hall-of-fame">
+    <div class="section-heading"><h2>Hall of fame</h2></div>
+    <ul id="hof-list" class="hof-list"></ul>
+  </section>
+
+  <a class="archives-link-card" href="archive.html">
+    <span class="eyebrow">Alle Projekte</span>
+    <span class="title">Das Archiv betreten →</span>
+  </a>
+
+</main>
+
+<script src="js/sha1.js"></script>
+<script src="js/config.js"></script>
+<script src="js/main.js"></script>
+</body>
 </html>
