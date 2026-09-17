@@ -1,6 +1,8 @@
 # games-coden
 so kompliziert ist das gar nicht
 
+gehe JETZT auf die website [[weisizoni.ch]]
+
 Um deine Dateien holen zu können:
 1. Öffne den computer unter Linux (Ubuntu)
 2. Doppelklicke die Datei `getfiles.sh`
