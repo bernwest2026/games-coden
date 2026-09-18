@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚽ Football AI Game</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: white;
+    background:
+        radial-gradient(circle at top, #176b35, #061b10 70%);
+    min-height: 100vh;
+}
+
+header {
+    text-align: center;
+    padding: 25px 10px;
+    background: rgba(0,0,0,.35);
+    border-bottom: 2px solid #38ff83;
+}
+
+h1 {
+    margin: 0;
+    font-size: 42px;
+    text-shadow: 0 0 15px #38ff83;
+}
+
+.subtitle {
+    color: #b9ffd0;
+    margin-top: 8px;
+}
+
+.container {
+    max-width: 1050px;
+    margin: auto;
+    padding: 20px;
+}
+
+.panel {
+    background: rgba(0,0,0,.45);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.3);
+}
+
+.ai {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+}
+
+.ai-avatar {
+    min-width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#35ff82,#087b37);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.ai-message {
+    background: #102b1b;
+    border-radius: 15px;
+    padding: 15px;
+    border: 1px solid #2c814b;
+    flex: 1;
+}
+
+select, button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: none;
+    font-size: 16px;
+}
+
+select {
+    background: #12281a;
+    color: white;
+    border: 1px solid #3f8d57;
+}
+
+button {
+    background: linear-gradient(90deg,#16c75b,#0b913f);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: .2s;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(32,255,115,.3);
+}
+
+.secondary {
+    background: #27372c;
+}
+
+.hidden {
+    display: none;
+}
+
+.scoreboard {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+    background: #08180e;
+    padding: 20px;
+    border-radius: 15px;
+    font-size: 22px;
+}
+
+.score {
+    font-size: 45px;
+    font-weight: bold;
+    color: #5dff98;
+}
+
+.minute {
+    color: #aaa;
+}
+
+.pitch {
+    position: relative;
+    height: 430px;
+    border: 3px solid white;
+    border-radius: 10px;
+    overflow: hidden;
+    background:
+        repeating-linear-gradient(
+            90deg,
+            #16843c 0px,
+            #16843c 70px,
+            #1a9143 70px,
+            #1a9143 140px
+        );
+}
+
+.pitch::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: white;
+}
+
+.circle {
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border: 2px solid white;
+    border-radius: 50%;
+    left: calc(50% - 60px);
+    top: calc(50% - 60px);
+}
+
+.goal-left,
+.goal-right {
+    position: absolute;
+    top: 35%;
+    width: 30px;
+    height: 30%;
+    border: 3px solid white;
+}
+
+.goal-left {
+    left: -3px;
+}
+
+.goal-right {
+    right: -3px;
+}
+
+.ball {
+    position: absolute;
+    font-size: 32px;
+    left: 48%;
+    top: 47%;
+    transition: 1s;
+}
+
+.actions {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 10px;
+}
+
+.actions button {
+    margin: 0;
+}
+
+.log {
+    max-height: 200px;
+    overflow-y: auto;
+    background: #07140c;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.log p {
+    margin: 7px 0;
+    color: #caffd8;
+}
+
+.final {
+    text-align: center;
+    font-size: 25px;
+    color: #65ff9b;
+}
+
+@media(max-width:700px) {
+    h1 {
+        font-size: 30px;
+    }
+
+    .actions {
+        grid-template-columns: 1fr;
+    }
+
+    .pitch {
+        height: 300px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>⚽ FOOTBALL AI GAME</h1>
+    <div class="subtitle">
+        Spiele gegen jedes Team – die KI entscheidet mit dir!
+    </div>
+</header>
+
+<div class="container">
+
+    <!-- KI -->
+    <div class="panel">
+        <div class="ai">
+            <div class="ai-avatar">🤖</div>
+
+            <div class="ai-message">
+                <strong>Football AI:</strong>
+                <div id="aiText">
+                    Willkommen Trainer! Wähle zuerst dein Team.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETUP -->
+    <div class="panel" id="setup">
+
+        <label>🏠 Dein Team</label>
+        <select id="team1">
+            <option>Deutschland 🇩🇪</option>
+            <option>Frankreich 🇫🇷</option>
+            <option>Spanien 🇪🇸</option>
+            <option>England 🏴</option>
+            <option>Italien 🇮🇹</option>
+            <option>Brasilien 🇧🇷</option>
+            <option>Argentinien 🇦🇷</option>
+            <option>Portugal 🇵🇹</option>
+            <option>Niederlande 🇳🇱</option>
+            <option>Belgien 🇧🇪</option>
+            <option>Japan 🇯🇵</option>
+            <option>USA 🇺🇸</option>
+            <option>Schweiz 🇨🇭</option>
+            <option>Österreich 🇦🇹</option>
+            <option>Türkei 🇹🇷</option>
+            <option>Eigene Mannschaft ⭐</option>
+        </select>
+
+        <label style="display:block;margin-top:15px">
+            🆚 Gegner
+        </label>
+
+        <select id="team2">
+            <option>Frankreich 🇫🇷</option>
+            <option>Deutschland 🇩🇪</option>
+            <option>Spanien 🇪🇸</option>
+            <option>England 🏴</option>
+            <option>Italien 🇮🇹</option>
+            <option>Brasilien 🇧🇷</option>
+            <option>Argentinien 🇦🇷</option>
+            <option>Portugal 🇵🇹</option>
+            <option>Niederlande 🇳🇱</option>
+            <option>Belgien 🇧🇪</option>
+            <option>Japan 🇯🇵</option>
+            <option>USA 🇺🇸</option>
+            <option>Schweiz 🇨🇭</option>
+            <option>Österreich 🇦🇹</option>
+            <option>Türkei 🇹🇷</option>
+            <option>Eigene Mannschaft ⭐</option>
+        </select>
+
+        <button onclick="startQuestions()">
+            🎮 SPIEL STARTEN
+        </button>
+    </div>
+
+
+    <!-- KI FRAGEN -->
+    <div class="panel hidden" id="questions">
+
+        <h2>🤖 Die KI möchte dich etwas fragen</h2>
+
+        <div id="questionBox"></div>
+
+    </div>
+
+
+    <!-- SPIEL -->
+    <div class="hidden" id="game">
+
+        <div class="panel scoreboard">
+            <div>
+                <div id="name1">Team 1</div>
+                <div class="score" id="score1">0</div>
+            </div>
+
+            <div>
+                <div class="minute" id="minute">1'</div>
+                <div>VS</div>
+            </div>
+
+            <div>
+                <div id="name2">Team 2</div>
+                <div class="score" id="score2">0</div>
+            </div>
+        </div>
+
+        <div class="panel">
+
+            <div class="pitch">
+                <div class="goal-left"></div>
+                <div class="goal-right"></div>
+                <div class="circle"></div>
+                <div class="ball" id="ball">⚽</div>
+            </div>
+
+        </div>
+
+        <div class="panel">
+
+            <h2>🎮 Deine Entscheidungen</h2>
+
+            <div class="actions">
+                <button onclick="action('attack')">
+                    🔥 ANGREIFEN
+                </button>
+
+                <button onclick="action('pass')">
+                    👟 PASSEN
+                </button>
+
+                <button onclick="action('defend')">
+                    🛡️ VERTEIDIGEN
+                </button>
+            </div>
+
+        </div>
+
+        <div class="panel">
+
+            <h2>🤖 KI-Spielbericht</h2>
+
+            <div class="log" id="log">
+                <p>Das Spiel beginnt...</p>
+            </div>
+
+        </div>
+
+        <div class="panel hidden" id="finalPanel">
+            <div class="final" id="finalText"></div>
+            <button onclick="location.reload()">
+                🔄 NEUES SPIEL
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+let teamA;
+let teamB;
+
+let scoreA = 0;
+let scoreB = 0;
+
+let minute = 1;
+let tactic = "";
+
+let gameRunning = false;
+
+const aiText = document.getElementById("aiText");
+
+
+function startQuestions() {
+
+    teamA = document.getElementById("team1").value;
+    teamB = document.getElementById("team2").value;
+
+    if(teamA === teamB) {
+
+        aiText.innerHTML =
+            "Moment! Du kannst nicht gegen dich selbst spielen 😄 Bitte wähle zwei verschiedene Teams.";
+
+        return;
+    }
+
+    document.getElementById("setup").classList.add("hidden");
+    document.getElementById("questions").classList.remove("hidden");
+
+    showQuestion1();
+}
+
+
+function showQuestion1() {
+
+    document.getElementById("questionBox").innerHTML = `
+
+        <p>
+        Du spielst mit <strong>${teamA}</strong> gegen
+        <strong>${teamB}</strong>.
+        </p>
+
+        <p>
+        🤖 <strong>KI:</strong> Wie möchtest du dein Team aufstellen?
+        </p>
+
+        <button onclick="answerTactic('offensiv')">
+            🔥 Sehr offensiv
+        </button>
+
+        <button onclick="answerTactic('ausgeglichen')">
+            ⚖️ Ausgeglichen
+        </button>
+
+        <button onclick="answerTactic('defensiv')">
+            🛡️ Defensiv
+        </button>
+    `;
+}
+
+
+function answerTactic(value) {
+
+    tactic = value;
+
+    aiText.innerHTML =
+        `Interessant! Du möchtest also <strong>${value}</strong> spielen. 
+        Ich werde deine Entscheidungen während des Spiels berücksichtigen.`;
+
+    showQuestion2();
+}
+
+
+function showQuestion2() {
+
+    document.getElementById("questionBox").innerHTML = `
+
+        <p>
+        🤖 <strong>KI:</strong> Letzte Frage vor dem Anpfiff:
+        </p>
+
+        <p>
+        Es ist die 1. Minute. Was ist dein Plan?
+        </p>
+
+        <button onclick="beginGame('tempo')">
+            ⚡ Sofort hohes Tempo
+        </button>
+
+        <button onclick="beginGame('kontrolle')">
+            🧠 Erst einmal Ball kontrollieren
+        </button>
+
+        <button onclick="beginGame('konter')">
+            🏃 Auf Konter warten
+        </button>
+    `;
+}
+
+
+function beginGame(plan) {
+
+    document.getElementById("questions").classList.add("hidden");
+    document.getElementById("game").classList.remove("hidden");
+
+    document.getElementById("name1").innerText = teamA;
+    document.getElementById("name2").innerText = teamB;
+
+    gameRunning = true;
+
+    addLog(
+        `🤖 Anpfiff! ${teamA} gegen ${teamB}. Dein Plan: ${plan}.`
+    );
+
+    aiText.innerHTML =
+        `Das Spiel läuft! Ich werde dir während der Partie Rückfragen stellen.`;
+
+    setTimeout(() => {
+        addLog("📣 Die Fans machen richtig Stimmung!");
+    },1000);
+}
+
+
+function action(type) {
+
+    if(!gameRunning) return;
+
+    minute += Math.floor(Math.random()*6)+2;
+
+    if(minute > 90) {
+        minute = 90;
+    }
+
+    document.getElementById("minute").innerText = minute + "'";
+
+    const ball = document.getElementById("ball");
+
+    let random = Math.random();
+
+    if(type === "attack") {
+
+        ball.style.left = "75%";
+
+        if(random < .25) {
+
+            scoreA++;
+
+            document.getElementById("score1").innerText = scoreA;
+
+            addLog(
+                `⚽ TOR! ${teamA} trifft! Unglaublicher Angriff!`
+            );
+
+            aiText.innerHTML =
+                `TOR! 🤯 Soll ich beim nächsten Angriff weiterhin offensiv spielen lassen?`;
+        }
+        else if(random < .55) {
+
+            addLog(
+                `🔥 ${teamA} greift gefährlich an, aber der Torwart hält!`
+            );
+
+            askAI();
+        }
+        else {
+
+            addLog(
+                `❌ Angriff von ${teamA} wurde abgefangen.`
+            );
+        }
+    }
+
+    else if(type === "pass") {
+
+        ball.style.left = "55%";
+
+        if(random < .65) {
+
+            addLog(
+                `👟 Schöner Pass! ${teamA} hält den Ball.`
+            );
+
+        } else {
+
+            addLog(
+                `😬 Fehlpass! ${teamB} erobert den Ball.`
+            );
+
+            opponentChance();
+        }
+    }
+
+    else if(type === "defend") {
+
+        ball.style.left = "25%";
+
+        if(random < .75) {
+
+            addLog(
+                `🛡️ Starke Defensive von ${teamA}!`
+            );
+
+        } else {
+
+            addLog(
+                `⚠️ ${teamB} kommt gefährlich vor das Tor!`
+            );
+
+            opponentChance();
+        }
+    }
+
+    if(minute >= 90) {
+        finishGame();
+    }
+}
+
+
+function opponentChance() {
+
+    let chance = Math.random();
+
+    if(chance < .18) {
+
+        scoreB++;
+
+        document.getElementById("score2").innerText = scoreB;
+
+        addLog(
+            `⚽ GEGENTOR! ${teamB} trifft!`
+        );
+
+        aiText.innerHTML =
+            `Das war bitter! 😬 Möchtest du jetzt mehr Druck machen?`;
+
+    } else {
+
+        addLog(
+            `🧤 Torwart von ${teamA} pariert!`
+        );
+    }
+}
+
+
+function askAI() {
+
+    const questions = [
+
+        "🤖 KI: Soll ich mehr über die Flügel spielen?",
+
+        "🤖 KI: Möchtest du einen schnellen Gegenangriff?",
+
+        "🤖 KI: Sollen wir das Mittelfeld stärker besetzen?",
+
+        "🤖 KI: Soll ich die Defensive etwas zurückziehen?",
+
+        "🤖 KI: Willst du jetzt alles nach vorne werfen?"
+    ];
+
+    aiText.innerHTML =
+        questions[Math.floor(Math.random()*questions.length)];
+}
+
+
+function addLog(text) {
+
+    const log = document.getElementById("log");
+
+    const p = document.createElement("p");
+
+    p.innerHTML = text;
+
+    log.appendChild(p);
+
+    log.scrollTop = log.scrollHeight;
+}
+
+
+function finishGame() {
+
+    gameRunning = false;
+
+    document.getElementById("finalPanel").classList.remove("hidden");
+
+    let result;
+
+    if(scoreA > scoreB) {
+
+        result =
+            `🏆 SIEG! ${teamA} gewinnt ${scoreA}:${scoreB}!`;
+
+    } else if(scoreA < scoreB) {
+
+        result =
+            `😢 NIEDERLAGE! ${teamB} gewinnt ${scoreB}:${scoreA}.`;
+
+    } else {
+
+        result =
+            `🤝 UNENTSCHIEDEN! ${scoreA}:${scoreB}.`;
+    }
+
+    document.getElementById("finalText").innerHTML = result;
+
+    aiText.innerHTML =
+        "Das Spiel ist vorbei! Was für eine Partie! ⚽🔥";
+}
+
+</script>
+
+</body>
+</html>
