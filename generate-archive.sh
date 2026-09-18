@@ -36,7 +36,7 @@ label_for() {
   local base
   base="$(basename "$1" .html)"
   base="${base//[-_]/ }"
-  echo "$(tr '[:lower:]' '[:upper:]' <<< "${base:0:1}")${base:1}"
+  echo "$(tr '[:lower:]' '[:lower:]' <<< "${base:0:1}")${base:1}"
 }
 
 mapfile -t files < <(find . -type f -name "*.html" -printf '%P\n' | sort)
