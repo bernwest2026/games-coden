@@ -1,0 +1,598 @@
+```html
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>🎲 Leiterli-Spiel</title>
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #e8f0ff;
+        text-align: center;
+    }
+
+    h1 {
+        margin: 18px 0 5px;
+    }
+
+    #turn {
+        font-size: 20px;
+        font-weight: bold;
+        margin: 10px;
+    }
+
+    #scores {
+        margin: 12px;
+        font-size: 17px;
+    }
+
+    .red {
+        color: #e22;
+        font-weight: bold;
+    }
+
+    .blue {
+        color: #1765d1;
+        font-weight: bold;
+    }
+
+    #board {
+        width: min(92vw, 650px);
+        height: min(92vw, 650px);
+        margin: auto;
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        grid-template-rows: repeat(10, 1fr);
+        border: 5px solid #222;
+        background: white;
+    }
+
+    .cell {
+        border: 1px solid #aaa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        font-weight: bold;
+        font-size: clamp(10px, 2vw, 17px);
+    }
+
+    .cell:nth-child(odd) {
+        background: #fff4c2;
+    }
+
+    .cell:nth-child(even) {
+        background: #cce8ff;
+    }
+
+    .ladder {
+        background: #bff0c8 !important;
+    }
+
+    .trap {
+        background: #ffc4c4 !important;
+    }
+
+    .finish {
+        background: #ffd966 !important;
+    }
+
+    .players {
+        position: absolute;
+        bottom: 3px;
+        display: flex;
+        gap: 3px;
+        z-index: 5;
+    }
+
+    .player {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 2px 5px #555;
+    }
+
+    .p1 {
+        background: #ff3333;
+    }
+
+    .p2 {
+        background: #3478f6;
+    }
+
+    .ladder-icon {
+        font-size: 20px;
+    }
+
+    .trap-icon {
+        font-size: 19px;
+    }
+
+    #dice {
+        font-size: 70px;
+        height: 80px;
+        margin: 10px;
+    }
+
+    button {
+        background: #3478f6;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 14px 30px;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #155bd1;
+    }
+
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    #message {
+        margin: 12px;
+        font-size: 18px;
+        font-weight: bold;
+        min-height: 25px;
+    }
+
+    #spam {
+        color: #777;
+        font-size: 14px;
+        margin-bottom: 15px;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>🎲 Leiterli-Spiel</h1>
+
+<div id="turn">
+    🔴 Spieler 1 ist dran
+</div>
+
+<div id="scores">
+    <span class="red">🔴 Spieler 1: Feld 1</span>
+    &nbsp; | &nbsp;
+    <span class="blue">🔵 Spieler 2: Feld 1</span>
+</div>
+
+<div id="board"></div>
+
+<div id="dice">🎲</div>
+
+<button id="rollButton" onclick="rollDice()">
+    WÜRFELN
+</button>
+
+<div id="message">
+    Spieler 1 beginnt!
+</div>
+
+<div id="spam">
+    💨 Schnelles Spammen erhöht deine Würfelzahl!
+</div>
+
+
+<script>
+
+// ======================================
+// SPIELER
+// ======================================
+
+let players = {
+    1: 1,
+    2: 1
+};
+
+let currentPlayer = 1;
+
+
+// ======================================
+// SPAM-SYSTEM
+// ======================================
+
+let spamCount = 0;
+let lastClick = 0;
+
+
+// ======================================
+// LEITERN
+// ======================================
+
+const ladders = {
+    4: 25,
+    13: 46,
+    33: 49,
+    42: 63,
+    50: 69,
+    62: 81,
+    74: 92
+};
+
+
+// ======================================
+// ZACKEN / FALLEN
+// ======================================
+
+const traps = {
+    27: 5,
+    40: 18,
+    54: 31,
+    66: 45,
+    79: 58,
+    89: 70,
+    97: 76
+};
+
+
+// ======================================
+// WÜRFEL
+// ======================================
+
+const diceFaces = [
+    "⚀",
+    "⚁",
+    "⚂",
+    "⚃",
+    "⚄",
+    "⚅"
+];
+
+
+const board = document.getElementById("board");
+const turnText = document.getElementById("turn");
+const diceDisplay = document.getElementById("dice");
+const message = document.getElementById("message");
+const rollButton = document.getElementById("rollButton");
+
+
+// ======================================
+// SPIELBRETT ERSTELLEN
+// ======================================
+
+function createBoard() {
+
+    board.innerHTML = "";
+
+    for (let row = 9; row >= 0; row--) {
+
+        let numbers = [];
+
+        for (let col = 1; col <= 10; col++) {
+
+            let number = row * 10 + col;
+
+            numbers.push(number);
+        }
+
+        // Jede zweite Reihe umdrehen
+        if (row % 2 === 1) {
+            numbers.reverse();
+        }
+
+        numbers.forEach(number => {
+
+            const cell = document.createElement("div");
+
+            cell.classList.add("cell");
+
+            cell.textContent = number;
+
+
+            // LEITER
+            if (ladders[number]) {
+
+                cell.classList.add("ladder");
+
+                cell.innerHTML =
+                    number + " 🪜";
+            }
+
+
+            // ZACKE / FALLE
+            if (traps[number]) {
+
+                cell.classList.add("trap");
+
+                cell.innerHTML =
+                    number + " ⚠️";
+            }
+
+
+            // ZIEL
+            if (number === 100) {
+
+                cell.classList.add("finish");
+
+                cell.innerHTML = "🏆 100";
+            }
+
+
+            // Spieler anzeigen
+            const playersHere =
+                document.createElement("div");
+
+            playersHere.classList.add("players");
+
+
+            if (players[1] === number) {
+
+                const p1 =
+                    document.createElement("div");
+
+                p1.classList.add(
+                    "player",
+                    "p1"
+                );
+
+                playersHere.appendChild(p1);
+            }
+
+
+            if (players[2] === number) {
+
+                const p2 =
+                    document.createElement("div");
+
+                p2.classList.add(
+                    "player",
+                    "p2"
+                );
+
+                playersHere.appendChild(p2);
+            }
+
+
+            cell.appendChild(playersHere);
+
+            board.appendChild(cell);
+
+        });
+    }
+
+    updateScores();
+}
+
+
+// ======================================
+// SPIELER-POSITIONEN
+// ======================================
+
+function updateScores() {
+
+    document.getElementById("scores").innerHTML =
+
+        `<span class="red">
+            🔴 Spieler 1: Feld ${players[1]}
+        </span>
+
+        &nbsp; | &nbsp;
+
+        <span class="blue">
+            🔵 Spieler 2: Feld ${players[2]}
+        </span>`;
+}
+
+
+// ======================================
+// WÜRFELN
+// ======================================
+
+function rollDice() {
+
+    const now = Date.now();
+
+
+    // Prüfen, ob schnell geklickt wurde
+    if (now - lastClick < 700) {
+
+        spamCount++;
+
+    } else {
+
+        spamCount = 0;
+    }
+
+
+    lastClick = now;
+
+
+    let dice;
+
+
+    // ==================================
+    // SPAM = HÖHERE ZAHL
+    // ==================================
+
+    if (spamCount >= 10) {
+
+        // 10+ schnelle Klicks = IMMER 6
+        dice = 6;
+
+        message.textContent =
+            "🔥 MAX-SPAM! Du bekommst eine 6!";
+
+    }
+
+    else if (spamCount >= 5) {
+
+        // 5+ = 4, 5 oder 6
+        dice =
+            Math.floor(Math.random() * 3) + 4;
+
+        message.textContent =
+            "🔥 Du hast gespammt! Hohe Zahl!";
+
+    }
+
+    else if (spamCount >= 3) {
+
+        // 3+ = 3, 4, 5 oder 6
+        dice =
+            Math.floor(Math.random() * 4) + 3;
+
+        message.textContent =
+            "💨 Schnelles Klicken!";
+
+    }
+
+    else {
+
+        // Normal
+        dice =
+            Math.floor(Math.random() * 6) + 1;
+
+        message.textContent =
+            `🎲 Spieler ${currentPlayer} würfelt...`;
+    }
+
+
+    diceDisplay.textContent =
+        diceFaces[dice - 1];
+
+
+    rollButton.disabled = true;
+
+
+    setTimeout(() => {
+
+        let oldPosition =
+            players[currentPlayer];
+
+        let newPosition =
+            oldPosition + dice;
+
+
+        // ==================================
+        // NICHT ÜBER 100
+        // ==================================
+
+        if (newPosition > 100) {
+
+            message.textContent =
+                `🎲 ${dice} ist zu viel! Spieler ${currentPlayer} bleibt auf Feld ${oldPosition}.`;
+
+        }
+
+        else {
+
+            players[currentPlayer] =
+                newPosition;
+
+            createBoard();
+
+
+            // ==================================
+            // LEITER
+            // ==================================
+
+            if (ladders[newPosition]) {
+
+                const old =
+                    newPosition;
+
+                players[currentPlayer] =
+                    ladders[newPosition];
+
+                createBoard();
+
+                message.textContent =
+                    `🪜 Spieler ${currentPlayer}: ${old} → ${players[currentPlayer]}!`;
+            }
+
+
+            // ==================================
+            // ZACKE
+            // ==================================
+
+            else if (traps[newPosition]) {
+
+                const old =
+                    newPosition;
+
+                players[currentPlayer] =
+                    traps[newPosition];
+
+                createBoard();
+
+                message.textContent =
+                    `⚠️ Zacke! Spieler ${currentPlayer}: ${old} → ${players[currentPlayer]}!`;
+            }
+
+
+            // ==================================
+            // GEWONNEN
+            // ==================================
+
+            if (players[currentPlayer] === 100) {
+
+                message.textContent =
+                    `🏆 SPIELER ${currentPlayer} GEWINNT!`;
+
+                turnText.textContent =
+                    `🎉 Spieler ${currentPlayer} hat gewonnen!`;
+
+                rollButton.disabled = true;
+
+                return;
+            }
+        }
+
+
+        // ==================================
+        // NÄCHSTER SPIELER
+        // ==================================
+
+        currentPlayer =
+            currentPlayer === 1 ? 2 : 1;
+
+
+        if (currentPlayer === 1) {
+
+            turnText.textContent =
+                "🔴 Spieler 1 ist dran";
+
+        } else {
+
+            turnText.textContent =
+                "🔵 Spieler 2 ist dran";
+        }
+
+
+        // Spam langsam zurücksetzen
+        setTimeout(() => {
+
+            spamCount = 0;
+
+        }, 1500);
+
+
+        rollButton.disabled = false;
+
+    }, 600);
+}
+
+
+// ======================================
+// SPIEL STARTEN
+// ======================================
+
+createBoard();
+
+</script>
+
+</body>
+</html>
+```
