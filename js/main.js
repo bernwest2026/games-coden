@@ -11,7 +11,7 @@ function renderHallOfFame() {
     const li = document.createElement("li");
     const a = document.createElement("a");
     a.href = url;
-    a.textContent = title;
+    a.textContent = title.toLowerCase();
     a.target = "_blank";
     a.rel = "noopener";
     li.appendChild(a);
