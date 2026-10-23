@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Matrix Type 99</title>
+
+<style>
+:root {
+    --bg: #050914;
+    --panel: #0a1528;
+    --panel2: #101f37;
+    --cyan: #00f2fe;
+    --blue: #4facfe;
+    --yellow: #fff600;
+    --red: #ff3864;
+    --green: #00ff9d;
+    --text: #f2f7ff;
+    --muted: #879bb5;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 20px;
+
+    background:
+        radial-gradient(ellipse at top, #14294b, transparent 65%),
+        var(--bg);
+
+    color: var(--text);
+    font-family: "Segoe UI", Arial, sans-serif;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+
+    background: repeating-linear-gradient(
+        0deg,
+        transparent 0,
+        transparent 3px,
+        rgba(0, 242, 254, .025) 4px
+    );
+}
+
+button,
+input {
+    font: inherit;
+}
+
+button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* HEADER */
+
+.topbar {
+    max-width: 1100px;
+    margin: 0 auto 35px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo {
+    color: var(--cyan);
+    font-size: .85rem;
+    font-weight: 900;
+    letter-spacing: 3px;
+}
+
+.highscore {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 10;
+
+    padding: 10px 13px;
+    border: 1px solid var(--cyan);
+    border-radius: 7px;
+
+    background: rgba(5, 9, 20, .95);
+    box-shadow: 0 0 15px #00f2fe22;
+
+    color: var(--muted);
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.highscore strong {
+    color: var(--yellow);
+}
+
+/* TITLE */
+
+.hero {
+    text-align: center;
+    margin: 55px auto 35px;
+}
+
+.hero h1 {
+    margin: 0;
+    font-size: clamp(2rem, 7vw, 4.5rem);
+    font-weight: 950;
+    letter-spacing: 4px;
+
+    text-shadow: 0 0 25px #00f2fe55;
+}
+
+.hero h1 span {
+    color: var(--cyan);
+}
+
+.hero p {
+    color: var(--muted);
+    font-size: .8rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+/* LAYOUT */
+
+.container {
+    width: 100%;
+    max-width: 900px;
+    margin: auto;
+}
+
+.screen {
+    display: none;
+
+    padding: clamp(18px, 4vw, 35px);
+
+    background: rgba(10, 21, 40, .96);
+    border: 1px solid #00f2fe77;
+    border-radius: 12px;
+
+    box-shadow: 0 0 35px #00f2fe0c;
+}
+
+.screen.active {
+    display: block;
+    animation: appear .25s ease;
+}
+
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: translateY(7px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.eyebrow {
+    color: var(--cyan);
+    font-size: .75rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+h2 {
+    margin: 15px 0;
+    font-size: clamp(1.5rem, 5vw, 2.2rem);
+}
+
+.description {
+    color: var(--muted);
+    line-height: 1.8;
+}
+
+/* BUTTONS */
+
+.btn {
+    padding: 13px 22px;
+    min-height: 48px;
+
+    border: none;
+    border-radius: 6px;
+
+    background: linear-gradient(135deg, var(--cyan), var(--blue));
+    color: #03101b;
+
+    font-weight: 900;
+    font-size: .85rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+
+    cursor: pointer;
+    transition: .2s;
+}
+
+.btn:hover {
+    background: var(--yellow);
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px #00f2fe33;
+}
+
+.btn.secondary {
+    background: transparent;
+    border: 1px solid #00f2fe88;
+    color: var(--cyan);
+}
+
+.btn.secondary:hover {
+    background: var(--cyan);
+    color: var(--bg);
+}
+
+.btn:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--yellow);
+    outline-offset: 4px;
+}
+
+.button-row {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 25px;
+}
+
+/* DEVICE SELECTION */
+
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.device-card {
+    padding: 25px 15px;
+
+    background: var(--panel2);
+    border: 1px solid #00f2fe33;
+    border-radius: 9px;
+
+    color: var(--text);
+    cursor: pointer;
+    text-align: center;
+    transition: .2s;
+}
+
+.device-card:hover {
+    border-color: var(--cyan);
+    box-shadow: 0 0 20px #00f2fe19;
+    transform: translateY(-3px);
+}
+
+.device-card.selected {
+    border-color: var(--yellow);
+    box-shadow: 0 0 15px #fff60020;
+}
+
+.device-icon {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 2.4rem;
+}
+
+.device-card strong {
+    display: block;
+    font-size: 1.05rem;
+}
+
+.device-card small {
+    display: block;
+    margin-top: 9px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+/* MODE SELECTION */
+
+.mode-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 13px;
+    margin-top: 25px;
+}
+
+.mode-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    min-width: 0;
+    padding: 20px 16px;
+
+    border: 1px solid #00f2fe33;
+    border-radius: 9px;
+    background: var(--panel2);
+
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.mode-card:hover {
+    border-color: var(--cyan);
+    transform: translateY(-3px);
+    box-shadow: 0 0 20px #00f2fe16;
+}
+
+.mode-icon {
+    margin-bottom: 15px;
+    font-size: 2rem;
+}
+
+.mode-card h3 {
+    margin: 0 0 10px;
+    color: var(--cyan);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.mode-card p {
+    flex: 1;
+    margin: 0 0 20px;
+
+    color: var(--muted);
+    font-size: .8rem;
+    line-height: 1.7;
+}
+
+.mode-tag {
+    padding: 6px 8px;
+    border-radius: 4px;
+
+    background: #00f2fe12;
+    color: var(--yellow);
+
+    font-size: .65rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+/* GAME HEADER */
+
+.game-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    margin-bottom: 18px;
+
+    color: var(--muted);
+    font-size: .75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.live-indicator {
+    color: var(--green);
+}
+
+/* PROGRESS */
+
+.progress-track {
+    height: 10px;
+    width: 100%;
+    margin: 12px 0 25px;
+
+    overflow: hidden;
+    border-radius: 10px;
+
+    background: #030710;
+    border: 1px solid #00f2fe33;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0;
+
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--blue), var(--cyan));
+
+    box-shadow: 0 0 12px #00f2fe66;
+    transition: width .12s linear;
+}
+
+.progress-fill.danger {
+    background: var(--red);
+}
+
+/* WORD DISPLAY */
+
+.word-label {
+    color: var(--muted);
+    font-size: .75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.word-display {
+    min-height: 65px;
+    margin: 20px 0;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+
+    font-size: clamp(2rem, 7vw, 3.5rem);
+    font-weight: 900;
+    letter-spacing: 2px;
+    overflow-wrap: anywhere;
+}
+
+.letter {
+    color: #edf5ff;
+}
+
+.letter.correct {
+    color: var(--cyan);
+    text-shadow: 0 0 10px #00f2fe88;
+}
+
+.letter.wrong {
+    color: var(--red);
+    background: #ff38641c;
+    border-radius: 3px;
+}
+
+/* INPUT */
+
+.input-box {
+    width: 100%;
+    min-height: 60px;
+    padding: 13px 16px;
+
+    border: 2px solid #00f2fe77;
+    border-radius: 7px;
+
+    background: #050914;
+    color: white;
+
+    font-size: 1.15rem;
+    text-align: center;
+}
+
+.input-box:focus {
+    border-color: var(--yellow);
+    outline: none;
+    box-shadow: 0 0 15px #fff60015;
+}
+
+.input-box:disabled {
+    opacity: .6;
+}
+
+.hint {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: .75rem;
+    text-align: center;
+}
+
+/* STATS */
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 25px;
+}
+
+.stat {
+    padding: 15px 8px;
+
+    border: 1px solid #00f2fe17;
+    border-radius: 7px;
+    background: #00f2fe06;
+
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    margin-bottom: 9px;
+
+    color: var(--muted);
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-value {
+    color: var(--yellow);
+    font-size: clamp(1.3rem, 4vw, 2rem);
+    font-weight: 900;
+}
+
+/* CPU RACE */
+
+.race-box {
+    margin: 25px 0;
+    padding: 18px;
+
+    border: 1px solid #00f2fe22;
+    border-radius: 8px;
+    background: #050914;
+}
+
+.race-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+
+    margin-bottom: 9px;
+
+    font-size: .8rem;
+    font-weight: 800;
+}
+
+.race-heading .player-name {
+    color: var(--cyan);
+}
+
+.race-heading .cpu-name {
+    color: var(--red);
+}
+
+.race-track {
+    height: 13px;
+    margin-bottom: 18px;
+
+    overflow: hidden;
+    border-radius: 10px;
+    background: #142238;
+}
+
+.race-fill {
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    transition: width .12s linear;
+}
+
+.race-fill.player {
+    background: linear-gradient(90deg, var(--blue), var(--cyan));
+    box-shadow: 0 0 10px #00f2fe55;
+}
+
+.race-fill.cpu {
+    background: linear-gradient(90deg, #ff3864, #ff8057);
+}
+
+/* RESULTS */
+
+.result-icon {
+    margin: 20px 0 5px;
+    font-size: 3rem;
+}
+
+.result-title {
+    font-size: clamp(1.8rem, 6vw, 2.8rem);
+}
+
+.result-message {
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.result-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 25px 0;
+}
+
+.result-card {
+    padding: 20px 10px;
+
+    border: 1px solid #00f2fe22;
+    border-radius: 8px;
+    background: #00f2fe06;
+}
+
+.result-number {
+    display: block;
+    color: var(--cyan);
+    font-size: 2rem;
+    font-weight: 900;
+}
+
+.result-label {
+    display: block;
+    margin-top: 8px;
+
+    color: var(--muted);
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.record-banner {
+    display: none;
+    margin: 20px 0;
+
+    color: var(--yellow);
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+
+.record-banner.show {
+    display: block;
+}
+
+/* FOOTER */
+
+footer {
+    max-width: 900px;
+    margin: 30px auto 0;
+
+    color: #586a83;
+    font-size: .7rem;
+    letter-spacing: 2px;
+    text-align: center;
+}
+
+/* MOBILE */
+
+@media (max-width: 650px) {
+    body {
+        padding: 12px;
+    }
+
+    .topbar {
+        margin-bottom: 20px;
+    }
+
+    .hero {
+        margin-top: 65px;
+    }
+
+    .hero p {
+        font-size: .65rem;
+        letter-spacing: 1px;
+    }
+
+    .mode-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mode-card {
+        padding: 18px;
+    }
+
+    .mode-icon {
+        margin-bottom: 8px;
+    }
+
+    .mode-card p {
+        margin-bottom: 12px;
+    }
+
+    .device-grid {
+        gap: 8px;
+    }
+
+    .device-card {
+        padding: 18px 8px;
+    }
+
+    .highscore {
+        top: 8px;
+        left: 8px;
+        padding: 8px;
+        font-size: .65rem;
+    }
+
+    .logo {
+        margin-left: 5px;
+        font-size: .7rem;
+    }
+
+    .stats {
+        gap: 5px;
+    }
+
+    .stat {
+        padding: 12px 4px;
+    }
+
+    .stat-label {
+        font-size: .6rem;
+        letter-spacing: 0;
+    }
+
+    .button-row {
+        flex-direction: column;
+    }
+
+    .button-row .btn {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- AUTOMATISCHER HIGHSCORE -->
+
+<div class="highscore">
+    🏆 Highscore:
+    <strong id="highscore-display">0 WPM</strong>
+</div>
+
+<header class="topbar">
+    <div class="logo">MT99 // TYPING SYSTEM</div>
+</header>
+
+<div class="hero">
+    <h1>MATRIX <span>TYPE</span> 99</h1>
+    <p>Test your speed. Beat the system.</p>
+</div>
+
+<main class="container">
+
+    <!-- ======================================
+         1. GERÄTEAUSWAHL
+    ======================================= -->
+
+    <section id="device-screen" class="screen active">
+
+        <div class="eyebrow">Systeminitialisierung</div>
+
+        <h2>Wähle dein Gerät</h2>
+
+        <p class="description">
+            Passe Matrix Type 99 an deine Plattform an.
+            Wähle deine bevorzugte Steuerung, um fortzufahren.
+        </p>
+
+        <div class="device-grid">
+
+            <button
+                class="device-card"
+                data-device="pc"
+            >
+                <span class="device-icon">🖥️</span>
+                <strong>PC</strong>
+                <small>
+                    Tastatursteuerung für Desktop und Laptop.
+                </small>
+            </button>
+
+            <button
+                class="device-card"
+                data-device="mobile"
+            >
+                <span class="device-icon">📱</span>
+                <strong>Mobile (PE)</strong>
+                <small>
+                    Touch-Tastatur und optimierte mobile Oberfläche.
+                </small>
+            </button>
+
+        </div>
+
+    </section>
+
+    <!-- ======================================
+         2. MODUSAUSWAHL
+    ======================================= -->
+
+    <section id="mode-screen" class="screen">
+
+        <div class="eyebrow">Spielmodus auswählen</div>
+
+        <h2>Wie willst du spielen?</h2>
+
+        <p class="description">
+            Drei Herausforderungen. Drei Wege, die Matrix
+            zu besiegen. Wähle deinen Modus.
+        </p>
+
+        <div class="mode-grid">
+
+            <button class="mode-card" data-mode="overdrive">
+
+                <span class="mode-icon">⚡</span>
+
+                <h3>Overdrive-Chronometer</h3>
+
+                <p>
+                    30 Sekunden. Keine Pause.
+                    Tippe so viele Wörter wie möglich
+                    und schlage deinen persönlichen Rekord.
+                </p>
+
+                <span class="mode-tag">30 SEKUNDEN</span>
+
+            </button>
+
+            <button class="mode-card" data-mode="marathon">
+
+                <span class="mode-icon">🏁</span>
+
+                <h3>Marathon 400</h3>
+
+                <p>
+                    400 Wörter, eine laufende Stoppuhr.
+                    Bleib konzentriert und beende die
+                    gesamte Strecke in Bestzeit.
+                </p>
+
+                <span class="mode-tag">400 WÖRTER</span>
+
+            </button>
+
+            <button class="mode-card" data-mode="cpu">
+
+                <span class="mode-icon">🤖</span>
+
+                <h3>CPU-Showdown 99</h3>
+
+                <p>
+                    Ein direktes Wettrennen gegen die CPU.
+                    Verfolge beide Fortschrittsbalken
+                    und erreiche zuerst das Ziel.
+                </p>
+
+                <span class="mode-tag">GEGEN CPU</span>
+
+            </button>
+
+        </div>
+
+        <div class="button-row">
+            <button id="back-device-btn" class="btn secondary">
+                ← Geräteauswahl
+            </button>
+        </div>
+
+    </section>
+
+    <!-- ======================================
+         3. SPIELBEREICH
+    ======================================= -->
+
+    <section id="game-screen" class="screen">
+
+        <div class="game-meta">
+            <span id="active-mode">OVERDRIVE</span>
+            <span class="live-indicator">● SYSTEM LIVE</span>
+        </div>
+
+        <!-- Spielerfortschritt -->
+
+        <div id="player-progress-area">
+
+            <div class="game-meta">
+                <span id="progress-label">ZEITFORTSCHRITT</span>
+                <span id="progress-text">0%</span>
+            </div>
+
+            <div class="progress-track">
+                <div
+                    id="player-progress"
+                    class="progress-fill"
+                ></div>
+            </div>
+
+        </div>
+
+        <!-- CPU-Fortschritt -->
+
+        <div id="cpu-area" hidden>
+
+            <div class="race-box">
+
+                <div class="race-heading">
+                    <span class="player-name">
+                        DU · <span id="player-race-percent">0%</span>
+                    </span>
+
+                    <span id="race-finish">ZIEL: 99</span>
+                </div>
+
+                <div class="race-track">
+                    <div
+                        id="player-race-bar"
+                        class="race-fill player"
+                    ></div>
+                </div>
+
+                <div class="race-heading">
+                    <span class="cpu-name">
+                        CPU · <span id="cpu-percent">0%</span>
+                    </span>
+
+                    <span id="cpu-speed">Bereit</span>
+                </div>
+
+                <div class="race-track">
+                    <div
+                        id="cpu-race-bar"
+                        class="race-fill cpu"
+                    ></div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="word-label" id="word-label">
+            Tippe das angezeigte Wort
+        </div>
+
+        <div
+            id="word-display"
+            class="word-display"
+            aria-live="polite"
+        ></div>
+
+        <input
+            id="word-input"
+            class="input-box"
+            type="text"
+            placeholder="Hier tippen..."
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-label="Angezeigtes Wort eingeben"
+            disabled
+        >
+
+        <div class="hint" id="input-hint">
+            Tippe das Wort vollständig und korrekt.
+        </div>
+
+        <div class="stats">
+
+            <div class="stat">
+                <span class="stat-label" id="time-label">
+                    Zeit
+                </span>
+
+                <span class="stat-value" id="time-value">
+                    30.0 s
+                </span>
+            </div>
+
+            <div class="stat">
+                <span class="stat-label">Richtige Wörter</span>
+
+                <span class="stat-value" id="score-value">
+                    0
+                </span>
+            </div>
+
+            <div class="stat">
+                <span class="stat-label">Geschwindigkeit</span>
+
+                <span class="stat-value" id="wpm-value">
+                    0
+                </span>
+            </div>
+
+        </div>
+
+        <div class="button-row">
+            <button id="quit-btn" class="btn secondary">
+                Spiel verlassen
+            </button>
+        </div>
+
+    </section>
+
+    <!-- ======================================
+         4. ERGEBNISSE
+    ======================================= -->
+
+    <section id="result-screen" class="screen">
+
+        <div class="eyebrow">Session abgeschlossen</div>
+
+        <div class="result-icon" id="result-icon">🏆</div>
+
+        <h2 class="result-title" id="result-title">
+            Herausforderung beendet
+        </h2>
+
+        <p class="result-message" id="result-message"></p>
+
+        <div id="record-banner" class="record-banner">
+            ★ NEUER HIGHSCORE ★
+        </div>
+
+        <div class="result-grid">
+
+            <div class="result-card">
+                <span class="result-number" id="result-score">0</span>
+                <span class="result-label">Richtige Wörter</span>
+            </div>
+
+            <div class="result-card">
+                <span class="result-number" id="result-wpm">0</span>
+                <span class="result-label">WPM</span>
+            </div>
+
+            <div class="result-card">
+                <span class="result-number" id="result-accuracy">100%</span>
+                <span class="result-label">Genauigkeit</span>
+            </div>
+
+            <div class="result-card">
+                <span class="result-number" id="result-time">0 s</span>
+                <span class="result-label">Spielzeit</span>
+            </div>
+
+        </div>
+
+        <div class="button-row">
+
+            <button id="retry-btn" class="btn">
+                ↻ Nochmal spielen
+            </button>
+
+            <button id="result-modes-btn" class="btn secondary">
+                Spielmodus wechseln
+            </button>
+
+        </div>
+
+    </section>
+
+</main>
+
+<footer>
+    MATRIX TYPE 99 · NEON TYPING SYSTEM
+</footer>
+
+<script>
+"use strict";
+
+/* =========================================
+   KONFIGURATION
+========================================= */
+
+const CONFIG = {
+    overdriveSeconds: 30,
+    marathonWords: 400,
+    cpuWords: 99,
+
+    // Simulierte Bot-Geschwindigkeit.
+    cpuWpmMin: 38,
+    cpuWpmMax: 52
+};
+
+const WORDS = [
+    "matrix", "tetris", "cyberpunk", "neon",
+    "pixel", "coding", "javascript", "vector",
+    "grid", "synthwave", "arcade", "speed",
+    "level", "player", "system", "online",
+    "battle", "combo", "blocks", "computer",
+    "keyboard", "digital", "future", "hacker",
+    "network", "terminal", "program", "robot",
+    "galaxy", "quantum", "energy", "signal",
+    "binary", "firewall", "algorithm", "database",
+    "internet", "software", "hardware", "monitor",
+    "console", "graphics", "machine", "virtual",
+    "reality", "technology", "neural", "protocol",
+    "security", "fire", "thunder", "shadow",
+    "velocity", "precision", "reaction", "rapid",
+    "electric", "magnetic", "frequency", "digital",
+    "systematic", "keyboard", "champion", "ultimate",
+    "lightning", "velocity", "response", "accuracy",
+    "cybernetic", "quantum", "infinite", "dynamic",
+    "interface", "processor", "wireless", "encryption",
+    "firepower", "blueprint", "overdrive", "marathon",
+    "showdown", "victory", "mission", "challenge",
+    "defender", "attack", "defense", "survival",
+    "operation", "tactical", "reactor", "sentinel",
+    "phantom", "eclipse", "crystal", "horizon"
+];
+
+/* =========================================
+   DOM
+========================================= */
+
+const $ = id => document.getElementById(id);
+
+const screens = {
+    device: $("device-screen"),
+    modes: $("mode-screen"),
+    game: $("game-screen"),
+    result: $("result-screen")
+};
+
+/* =========================================
+   ZUSTAND
+========================================= */
+
+const state = {
+    device: null,
+    mode: null,
+
+    active: false,
+
+    score: 0,
+    correctChars: 0,
+    typedChars: 0,
+
+    currentWord: "",
+    previousWord: "",
+
+    startedAt: 0,
+    endedAt: 0,
+
+    cpuStartedAt: 0,
+    cpuWpm: 45,
+    cpuProgress: 0,
+
+    timerId: null,
+
+    // Verhindert mehrfaches Starten oder Beenden.
+    sessionId: 0,
+
+    lastResult: null
+};
+
+/* =========================================
+   SPEICHER
+========================================= */
+
+const STORAGE_KEY = "matrixType99Records";
+
+function loadRecords() {
+    try {
+        const data = JSON.parse(
+            localStorage.getItem(STORAGE_KEY) || "{}"
+        );
+
+        return {
+            overdrive: Number(data.overdrive) || 0,
+            marathon: Number(data.marathon) || 0,
+            cpu: Number(data.cpu) || 0
+        };
+    } catch {
+        return {
+            overdrive: 0,
+            marathon: 0,
+            cpu: 0
+        };
+    }
+}
+
+function saveRecords(records) {
+    try {
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(records)
+        );
+    } catch {
+        // Das Spiel bleibt auch ohne lokalen Speicher spielbar.
+    }
+}
+
+function updateHighscore() {
+    const records = loadRecords();
+
+    const best = Math.max(
+        records.overdrive,
+        records.marathon,
+        records.cpu
+    );
+
+    $("highscore-display").textContent = `${best} WPM`;
+}
+
+/* =========================================
+   NAVIGATION
+========================================= */
+
+function showScreen(name) {
+    Object.entries(screens).forEach(([key, screen]) => {
+        screen.classList.toggle("active", key === name);
+    });
+}
+
+function stopTimer() {
+    if (state.timerId !== null) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+    }
+}
+
+function goToModes() {
+    stopTimer();
+
+    state.active = false;
+    state.sessionId++;
+
+    $("word-input").disabled = true;
+
+    showScreen("modes");
+}
+
+function goToDevices() {
+    goToModes();
+
+    showScreen("device");
+}
+
+/* =========================================
+   GERÄTEAUSWAHL
+========================================= */
+
+document.querySelectorAll("[data-device]").forEach(button => {
+    button.addEventListener("click", () => {
+        state.device = button.dataset.device;
+
+        document.querySelectorAll("[data-device]").forEach(item => {
+            item.classList.toggle(
+                "selected",
+                item.dataset.device === state.device
+            );
+        });
+
+        // Die responsive CSS passt sich zusätzlich
+        // automatisch an die Bildschirmbreite an.
+        document.body.dataset.device = state.device;
+
+        showScreen("modes");
+    });
+});
+
+/* =========================================
+   MODUSAUSWAHL
+========================================= */
+
+document.querySelectorAll("[data-mode]").forEach(button => {
+    button.addEventListener("click", () => {
+        startGame(button.dataset.mode);
+    });
+});
+
+$("back-device-btn").addEventListener("click", goToDevices);
+
+$("quit-btn").addEventListener("click", () => {
+    goToModes();
+});
+
+$("result-modes-btn").addEventListener("click", goToModes);
+
+$("retry-btn").addEventListener("click", () => {
+    if (state.lastResult) {
+        startGame(state.lastResult.mode);
+    }
+});
+
+/* =========================================
+   WORTGENERATOR
+========================================= */
+
+function getNextWord() {
+    let word;
+
+    do {
+        word = WORDS[Math.floor(Math.random() * WORDS.length)];
+    } while (
+        WORDS.length > 1 &&
+        word === state.previousWord
+    );
+
+    state.previousWord = word;
+    return word;
+}
+
+function renderWord() {
+    const input = $("word-input").value;
+    const display = $("word-display");
+
+    display.replaceChildren();
+
+    for (let i = 0; i < state.currentWord.length; i++) {
+        const span = document.createElement("span");
+
+        span.className = "letter";
+        span.textContent = state.currentWord[i];
+
+        if (i < input.length) {
+            span.classList.add(
+                input[i] === state.currentWord[i]
+                    ? "correct"
+                    : "wrong"
+            );
+        }
+
+        display.appendChild(span);
+    }
+}
+
+function nextWord() {
+    state.currentWord = getNextWord();
+
+    $("word-input").value = "";
+
+    renderWord();
+}
+
+/* =========================================
+   SPIEL STARTEN
+========================================= */
+
+function startGame(mode) {
+    stopTimer();
+
+    state.sessionId++;
+
+    state.mode = mode;
+    state.active = false;
+
+    state.score = 0;
+    state.correctChars = 0;
+    state.typedChars = 0;
+
+    state.currentWord = "";
+    state.previousWord = "";
+
+    state.startedAt = 0;
+    state.endedAt = 0;
+
+    state.cpuProgress = 0;
+    state.cpuStartedAt = 0;
+
+    const session = state.sessionId;
+
+    // Modusinformationen.
+    const names = {
+        overdrive: "OVERDRIVE-CHRONOMETER",
+        marathon: "MARATHON 400",
+        cpu: "CPU-SHOWDOWN 99"
+    };
+
+    $("active-mode").textContent = names[mode];
+
+    // CPU-Anzeige nur im Showdown.
+    $("cpu-area").hidden = mode !== "cpu";
+
+    // Zeit- und Fortschrittsanzeige konfigurieren.
+    if (mode === "overdrive") {
+        $("time-label").textContent = "Restzeit";
+        $("progress-label").textContent = "Zeitfortschritt";
+        $("input-hint").textContent =
+            "30 Sekunden. Tippe jedes Wort korrekt.";
+        $("time-value").textContent = "30.0 s";
+    } else if (mode === "marathon") {
+        $("time-label").textContent = "Stoppuhr";
+        $("progress-label").textContent = "Marathon-Fortschritt";
+        $("input-hint").textContent =
+            "Absolviere exakt 400 Wörter.";
+        $("time-value").textContent = "0.0 s";
+    } else {
+        $("time-label").textContent = "Rennzeit";
+        $("progress-label").textContent = "Rennfortschritt";
+        $("input-hint").textContent =
+            "Erreiche 99 Wörter vor der CPU.";
+        $("time-value").textContent = "0.0 s";
+
+        $("race-finish").textContent = "ZIEL: 99";
+        $("cpu-speed").textContent = "Bereit";
+        $("cpu-percent").textContent = "0%";
+        $("player-race-percent").textContent = "0%";
+
+        $("player-race-bar").style.width = "0%";
+        $("cpu-race-bar").style.width = "0%";
+    }
+
+    $("score-value").textContent = "0";
+    $("wpm-value").textContent = "0";
+
+    $("player-progress").style.width = "0%";
+    $("player-progress").classList.remove("danger");
+    $("progress-text").textContent = "0%";
+
+    $("word-input").value = "";
+    $("word-input").disabled = false;
+
+    nextWord();
+
+    showScreen("game");
+
+    // Erst jetzt beginnt die Runde.
+    state.startedAt = performance.now();
+    state.active = true;
+
+    if (mode === "cpu") {
+        state.cpuStartedAt = state.startedAt;
+
+        // Bot-Geschwindigkeit für diese Runde festlegen.
+        state.cpuWpm =
+            CONFIG.cpuWpmMin +
+            Math.random() *
+            (CONFIG.cpuWpmMax - CONFIG.cpuWpmMin);
+    }
+
+    tick();
+
+    state.timerId = setInterval(() => {
+        // Veraltete Timer dürfen keine neue Runde beeinflussen.
+        if (state.sessionId !== session) return;
+
+        tick();
+    }, 50);
+
+    requestAnimationFrame(() => {
+        if (state.active && state.sessionId === session) {
+            $("word-input").focus();
+        }
+    });
+}
+
+/* =========================================
+   EINGABEVERARBEITUNG
+========================================= */
+
+$("word-input").addEventListener("input", event => {
+    if (!state.active) return;
+
+    const input = $("word-input").value;
+
+    // Einfügen zählt als getippte Zeichen.
+    // Das Löschen eines Fehlers macht die
+    // Genauigkeitsmessung nicht rückgängig.
+    if (
+        event.inputType &&
+        event.inputType.startsWith("insert") &&
+        event.data !== null
+    ) {
+        state.typedChars += event.data.length;
+    }
+
+    renderWord();
+
+    if (input === state.currentWord) {
+        state.score++;
+        state.correctChars += state.currentWord.length;
+
+        $("score-value").textContent = state.score;
+
+        // Marathon: exakt 400 Wörter.
+        if (
+            state.mode === "marathon" &&
+            state.score >= CONFIG.marathonWords
+        ) {
+            finishGame("completed");
+            return;
+        }
+
+        // CPU-Showdown: exakt 99 Spielerwörter.
+        if (
+            state.mode === "cpu" &&
+            state.score >= CONFIG.cpuWords
+        ) {
+            finishGame("won");
+            return;
+        }
+
+        nextWord();
+
+        updateLiveStats();
+    }
+});
+
+/* =========================================
+   SPIELZEIT UND WPM
+========================================= */
+
+function elapsedSeconds() {
+    if (!state.startedAt) return 0;
+
+    const endpoint = state.active
+        ? performance.now()
+        : state.endedAt;
+
+    return Math.max(0, (endpoint - state.startedAt) / 1000);
+}
+
+function calculateWPM() {
+    const elapsed = elapsedSeconds();
+
+    if (elapsed <= 0) return 0;
+
+    return Math.round(
+        (state.correctChars / 5) / (elapsed / 60)
+    );
+}
+
+function calculateAccuracy() {
+    if (state.typedChars === 0) return 100;
+
+    return Math.round(
+        state.correctChars / state.typedChars * 100
+    );
+}
+
+function updateLiveStats() {
+    $("wpm-value").textContent = calculateWPM();
+}
+
+/* =========================================
+   SPIELTICK
+========================================= */
+
+function tick() {
+    if (!state.active) return;
+
+    const elapsed = elapsedSeconds();
+
+    // Zeit und Fortschritt im jeweiligen Modus.
+    if (state.mode === "overdrive") {
+        const remaining = Math.max(
+            0,
+            CONFIG.overdriveSeconds - elapsed
+        );
+
+        const percent = Math.min(
+            100,
+            elapsed / CONFIG.overdriveSeconds * 100
+        );
+
+        $("time-value").textContent =
+            `${remaining.toFixed(1)} s`;
+
+        $("player-progress").style.width = `${percent}%`;
+        $("progress-text").textContent =
+            `${Math.floor(percent)}%`;
+
+        $("player-progress").classList.toggle(
+            "danger",
+            remaining <= 5
+        );
+
+        if (remaining <= 0) {
+            finishGame("completed");
+            return;
+        }
+    }
+
+    if (state.mode === "marathon") {
+        const percent = Math.min(
+            100,
+            state.score / CONFIG.marathonWords * 100
+        );
+
+        $("time-value").textContent =
+            `${elapsed.toFixed(1)} s`;
+
+        $("player-progress").style.width = `${percent}%`;
+        $("progress-text").textContent =
+            `${state.score} / ${CONFIG.marathonWords}`;
+    }
+
+    if (state.mode === "cpu") {
+        const playerPercent = Math.min(
+            100,
+            state.score / CONFIG.cpuWords * 100
+        );
+
+        // Simulierter Bot-Fortschritt:
+        // Die CPU schreibt mit einer konstanten
+        // simulierten Geschwindigkeit.
+        const cpuWordsPerSecond = state.cpuWpm / 60;
+
+        state.cpuProgress = Math.min(
+            CONFIG.cpuWords,
+            elapsed * cpuWordsPerSecond
+        );
+
+        const cpuPercent =
+            state.cpuProgress / CONFIG.cpuWords * 100;
+
+        $("time-value").textContent =
+            `${elapsed.toFixed(1)} s`;
+
+        $("player-progress").style.width =
+            `${playerPercent}%`;
+
+        $("progress-text").textContent =
+            `${state.score} / ${CONFIG.cpuWords}`;
+
+        $("player-race-bar").style.width =
+            `${playerPercent}%`;
+
+        $("cpu-race-bar").style.width =
+            `${cpuPercent}%`;
+
+        $("player-race-percent").textContent =
+            `${Math.floor(playerPercent)}%`;
+
+        $("cpu-percent").textContent =
+            `${Math.floor(cpuPercent)}%`;
+
+        $("cpu-speed").textContent =
+            `${Math.round(state.cpuWpm)} WPM`;
+
+        // Die CPU gewinnt, wenn sie das Ziel erreicht.
+        if (state.cpuProgress >= CONFIG.cpuWords) {
+            finishGame("lost");
+            return;
+        }
+    }
+
+    updateLiveStats();
+}
+
+/* =========================================
+   SPIEL BEENDET
+========================================= */
+
+function finishGame(outcome) {
+    if (!state.active) return;
+
+    state.active = false;
+    state.endedAt = performance.now();
+
+    stopTimer();
+
+    $("word-input").disabled = true;
+
+    const elapsed = elapsedSeconds();
+    const wpm = calculateWPM();
+    const accuracy = calculateAccuracy();
+
+    const records = loadRecords();
+
+    const previousRecord = records[state.mode] || 0;
+
+    const isNewRecord = wpm > previousRecord;
+
+    if (isNewRecord) {
+        records[state.mode] = wpm;
+        saveRecords(records);
+    }
+
+    updateHighscore();
+
+    let title = "Herausforderung beendet";
+    let message = "Gute Leistung. Die nächste Runde wartet.";
+    let icon = "🏁";
+
+    if (state.mode === "overdrive") {
+        title = "Zeit abgelaufen!";
+        message =
+            `Du hast ${state.score} Wörter in 30 Sekunden geschafft.`;
+        icon = "⚡";
+    }
+
+    if (state.mode === "marathon") {
+        title = "Marathon abgeschlossen!";
+        message =
+            `Du hast alle 400 Wörter in ${elapsed.toFixed(2)} Sekunden absolviert.`;
+        icon = "🏆";
+    }
+
+    if (state.mode === "cpu" && outcome === "won") {
+        title = "Du hast gewonnen!";
+        message =
+            `Du hast die 99 Wörter vor der CPU absolviert. Deine Zeit: ${elapsed.toFixed(2)} Sekunden.`;
+        icon = "🏆";
+    }
+
+    if (state.mode === "cpu" && outcome === "lost") {
+        title = "Die CPU gewinnt!";
+        message =
+            "Die CPU hat das Ziel vor dir erreicht. Versuche es erneut!";
+        icon = "🤖";
+    }
+
+    $("result-title").textContent = title;
+    $("result-message").textContent = message;
+    $("result-icon").textContent = icon;
+
+    $("result-score").textContent = state.score;
+    $("result-wpm").textContent = wpm;
+    $("result-accuracy").textContent = `${accuracy}%`;
+    $("result-time").textContent = `${elapsed.toFixed(2)} s`;
+
+    $("record-banner").classList.toggle(
+        "show",
+        isNewRecord
+    );
+
+    state.lastResult = {
+        mode: state.mode,
+        outcome
+    };
+
+    showScreen("result");
+}
+
+/* =========================================
+   TASTATUR
+========================================= */
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && state.active) {
+        goToModes();
+    }
+});
+
+/* =========================================
+   INITIALISIERUNG
+========================================= */
+
+function init() {
+    updateHighscore();
+
+    showScreen("device");
+
+    $("word-input").disabled = true;
+}
+
+init();
+
+</script>
+
+</body>
+</html>

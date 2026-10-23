@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Matrix Type 99</title>
+
+    <style>
+        /* ========================================
+           MATRIX TYPE 99 — DESIGN
+        ======================================== */
+
+        :root {
+            --bg: #050b14;
+            --panel: #0a1728;
+            --panel-light: #10243b;
+            --cyan: #00f2fe;
+            --blue: #4facfe;
+            --yellow: #fff600;
+            --red: #ff3366;
+            --green: #00ff9d;
+            --text: #f4f8ff;
+            --muted: #8295ac;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding: 24px 16px;
+
+            background:
+                radial-gradient(
+                    ellipse at top,
+                    #102745 0%,
+                    var(--bg) 65%
+                );
+
+            color: var(--text);
+            font-family: "Segoe UI", Arial, sans-serif;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+
+            overflow-x: hidden;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        button {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Hintergrund-Effekt */
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0px,
+                transparent 3px,
+                rgba(0, 242, 254, 0.025) 4px
+            );
+
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* ========================================
+           KOPFBEREICH
+        ======================================== */
+
+        .topbar {
+            width: 100%;
+            max-width: 900px;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .logo-small {
+            color: var(--cyan);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+        }
+
+        .highscore {
+            padding: 10px 14px;
+
+            border: 1px solid rgba(0, 242, 254, 0.55);
+            border-radius: 8px;
+
+            background: rgba(0, 242, 254, 0.07);
+
+            color: var(--muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .highscore strong {
+            color: var(--yellow);
+            margin-left: 5px;
+        }
+
+        /* ========================================
+           TITEL
+        ======================================== */
+
+        .hero {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        .hero h1 {
+            margin: 0;
+
+            font-size: clamp(2.2rem, 7vw, 4.5rem);
+            font-weight: 900;
+            letter-spacing: 4px;
+            line-height: 1.1;
+
+            color: white;
+
+            text-shadow:
+                0 0 10px rgba(0, 242, 254, 0.6),
+                0 0 35px rgba(0, 242, 254, 0.2);
+        }
+
+        .hero h1 span {
+            color: var(--cyan);
+        }
+
+        .subtitle {
+            margin-top: 14px;
+
+            color: var(--muted);
+            font-size: 0.9rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        /* ========================================
+           SPIELFENSTER
+        ======================================== */
+
+        .screen {
+            display: none;
+
+            width: 100%;
+            max-width: 700px;
+
+            padding: clamp(20px, 5vw, 36px);
+
+            background: rgba(10, 23, 40, 0.95);
+
+            border: 1px solid rgba(0, 242, 254, 0.55);
+            border-radius: 14px;
+
+            box-shadow:
+                0 0 30px rgba(0, 242, 254, 0.08),
+                inset 0 0 30px rgba(0, 242, 254, 0.02);
+        }
+
+        .screen.active {
+            display: block;
+            animation: appear 0.3s ease;
+        }
+
+        @keyframes appear {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ========================================
+           STARTMENÜ
+        ======================================== */
+
+        .menu-label {
+            color: var(--cyan);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .menu-title {
+            margin: 18px 0;
+
+            font-size: clamp(1.6rem, 5vw, 2.4rem);
+            line-height: 1.2;
+        }
+
+        .description {
+            max-width: 460px;
+            margin: 0 auto 28px;
+
+            color: var(--muted);
+            line-height: 1.8;
+        }
+
+        .instructions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+
+            margin: 28px 0;
+        }
+
+        .instruction {
+            padding: 15px 8px;
+
+            border: 1px solid rgba(0, 242, 254, 0.12);
+            border-radius: 8px;
+
+            background: rgba(0, 242, 254, 0.035);
+        }
+
+        .instruction .icon {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 1.5rem;
+        }
+
+        .instruction strong {
+            display: block;
+            font-size: 0.85rem;
+        }
+
+        .instruction small {
+            display: block;
+            margin-top: 5px;
+
+            color: var(--muted);
+            font-size: 0.72rem;
+        }
+
+        /* ========================================
+           BUTTONS
+        ======================================== */
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            min-height: 50px;
+            padding: 14px 25px;
+
+            border: 0;
+            border-radius: 7px;
+
+            background: linear-gradient(
+                135deg,
+                var(--cyan),
+                var(--blue)
+            );
+
+            color: #04101c;
+
+            font-size: 0.9rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+
+            cursor: pointer;
+
+            transition:
+                transform 0.2s,
+                box-shadow 0.2s,
+                background 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+
+            box-shadow:
+                0 5px 25px rgba(0, 242, 254, 0.3);
+
+            background: var(--yellow);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            color: var(--cyan);
+
+            border: 1px solid rgba(0, 242, 254, 0.5);
+            background: transparent;
+
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            color: var(--bg);
+            background: var(--cyan);
+        }
+
+        .button-row {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        /* ========================================
+           SPIELBEREICH
+        ======================================== */
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            margin-bottom: 12px;
+
+            color: var(--muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+
+            border-radius: 50%;
+            background: var(--green);
+
+            box-shadow: 0 0 10px var(--green);
+        }
+
+        /* Zeitbalken */
+
+        .progress-track {
+            width: 100%;
+            height: 9px;
+
+            margin-bottom: 35px;
+
+            overflow: hidden;
+
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            border-radius: 20px;
+
+            background: #030810;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 100%;
+
+            border-radius: inherit;
+
+            background: linear-gradient(
+                90deg,
+                var(--blue),
+                var(--cyan)
+            );
+
+            box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+
+            transition:
+                width 0.12s linear,
+                background 0.2s;
+        }
+
+        .progress-bar.danger {
+            background: var(--red);
+            box-shadow: 0 0 12px rgba(255, 51, 102, 0.6);
+        }
+
+        /* Wort */
+
+        .word-label {
+            color: var(--muted);
+            font-size: 0.75rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .word-display {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+
+            min-height: 70px;
+            margin: 18px 0 25px;
+
+            font-size: clamp(2rem, 7vw, 3.4rem);
+            font-weight: 900;
+            letter-spacing: 2px;
+
+            overflow-wrap: anywhere;
+        }
+
+        .letter {
+            color: #eaf4ff;
+            transition: color 0.1s;
+        }
+
+        .letter.correct {
+            color: var(--cyan);
+
+            text-shadow:
+                0 0 10px rgba(0, 242, 254, 0.6);
+        }
+
+        .letter.wrong {
+            color: var(--red);
+
+            background: rgba(255, 51, 102, 0.12);
+            border-radius: 3px;
+        }
+
+        /* Eingabefeld */
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-box {
+            width: 100%;
+            min-height: 62px;
+
+            padding: 14px 18px;
+
+            outline: none;
+
+            border: 2px solid rgba(0, 242, 254, 0.5);
+            border-radius: 8px;
+
+            background: #050b14;
+
+            color: white;
+
+            font-size: 1.2rem;
+            text-align: center;
+
+            transition:
+                border-color 0.2s,
+                box-shadow 0.2s;
+        }
+
+        .input-box:focus {
+            border-color: var(--cyan);
+
+            box-shadow:
+                0 0 18px rgba(0, 242, 254, 0.12);
+        }
+
+        .input-box::placeholder {
+            color: #52657c;
+        }
+
+        .input-box:disabled {
+            opacity: 0.65;
+        }
+
+        .input-hint {
+            margin-top: 12px;
+
+            color: var(--muted);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* ========================================
+           STATISTIKEN
+        ======================================== */
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+
+            margin-top: 30px;
+            padding-top: 25px;
+
+            border-top: 1px solid rgba(0, 242, 254, 0.15);
+        }
+
+        .stat {
+            padding: 15px 5px;
+
+            border-radius: 8px;
+
+            background: rgba(0, 242, 254, 0.035);
+
+            text-align: center;
+        }
+
+        .stat-label {
+            display: block;
+
+            margin-bottom: 8px;
+
+            color: var(--muted);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            display: block;
+
+            color: var(--yellow);
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 900;
+        }
+
+        .stat-unit {
+            color: var(--muted);
+            font-size: 0.75rem;
+        }
+
+        /* ========================================
+           ERGEBNISSE
+        ======================================== */
+
+        .result-icon {
+            margin: 15px 0;
+            font-size: 3rem;
+        }
+
+        .result-title {
+            margin: 10px 0;
+
+            font-size: clamp(1.8rem, 6vw, 2.7rem);
+            font-weight: 900;
+        }
+
+        .result-subtitle {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+
+            margin: 30px 0;
+        }
+
+        .result-card {
+            padding: 20px 10px;
+
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            border-radius: 8px;
+
+            background: rgba(0, 242, 254, 0.04);
+        }
+
+        .result-number {
+            display: block;
+
+            color: var(--cyan);
+            font-size: 2rem;
+            font-weight: 900;
+        }
+
+        .result-name {
+            display: block;
+
+            margin-top: 7px;
+
+            color: var(--muted);
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .new-record {
+            display: none;
+
+            margin-bottom: 22px;
+
+            color: var(--yellow);
+            font-weight: 900;
+            letter-spacing: 2px;
+
+            animation: glow 1s infinite alternate;
+        }
+
+        .new-record.show {
+            display: block;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px rgba(255, 246, 0, 0.2);
+            }
+
+            to {
+                text-shadow: 0 0 18px rgba(255, 246, 0, 0.8);
+            }
+        }
+
+        /* ========================================
+           FOOTER
+        ======================================== */
+
+        footer {
+            margin-top: 30px;
+
+            color: #50647b;
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        /* ========================================
+           MOBILE
+        ======================================== */
+
+        @media (max-width: 480px) {
+            body {
+                padding: 16px 12px;
+            }
+
+            .topbar {
+                margin-bottom: 25px;
+            }
+
+            .hero {
+                margin-bottom: 25px;
+            }
+
+            .subtitle {
+                font-size: 0.7rem;
+                letter-spacing: 2px;
+            }
+
+            .instructions {
+                gap: 6px;
+            }
+
+            .instruction {
+                padding: 12px 4px;
+            }
+
+            .instruction strong {
+                font-size: 0.75rem;
+            }
+
+            .instruction small {
+                font-size: 0.65rem;
+            }
+
+            .stats {
+                gap: 6px;
+            }
+
+            .stat {
+                padding: 12px 3px;
+            }
+
+            .stat-label {
+                font-size: 0.6rem;
+                letter-spacing: 0;
+            }
+
+            .highscore {
+                padding: 8px;
+                font-size: 0.65rem;
+            }
+
+            .logo-small {
+                font-size: 0.65rem;
+                letter-spacing: 1px;
+            }
+
+            .btn {
+                width: 100%;
+                margin: 0;
+            }
+
+            .button-row {
+                flex-direction: column;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- KOPF -->
+
+    <header class="topbar">
+        <div class="logo-small">MT99 // SYSTEM</div>
+
+        <div class="highscore">
+            🏆 Rekord:
+            <strong id="highscore">0 WPM</strong>
+        </div>
+    </header>
+
+    <!-- TITEL -->
+
+    <section class="hero">
+        <h1>MATRIX <span>TYPE</span> 99</h1>
+
+        <div class="subtitle">
+            Test your speed. Beat the system.
+        </div>
+    </section>
+
+    <!-- ========================================
+         STARTMENÜ
+    ======================================== -->
+
+    <main id="start-screen" class="screen active">
+
+        <div class="menu-label">System bereit</div>
+
+        <h2 class="menu-title">
+            Bist du schneller als die Matrix?
+        </h2>
+
+        <p class="description">
+            Die Zeit läuft. Die Wörter erscheinen.
+            Tippe so schnell und genau wie möglich,
+            um deinen persönlichen Rekord zu brechen.
+        </p>
+
+        <div class="instructions">
+
+            <div class="instruction">
+                <span class="icon">⌨️</span>
+                <strong>Tippen</strong>
+                <small>Wörter eingeben</small>
+            </div>
+
+            <div class="instruction">
+                <span class="icon">⚡</span>
+                <strong>Tempo</strong>
+                <small>Schnell bleiben</small>
+            </div>
+
+            <div class="instruction">
+                <span class="icon">🏆</span>
+                <strong>Gewinnen</strong>
+                <small>Rekord schlagen</small>
+            </div>
+
+        </div>
+
+        <button class="btn" id="start-btn">
+            ▶ Spiel starten
+        </button>
+
+    </main>
+
+    <!-- ========================================
+         SPIEL
+    ======================================== -->
+
+    <section id="game-screen" class="screen">
+
+        <div class="game-header">
+            <span>Typing Challenge</span>
+
+            <span class="status">
+                <span class="status-dot"></span>
+                LIVE
+            </span>
+        </div>
+
+        <div class="progress-track">
+            <div
+                id="time-bar"
+                class="progress-bar"
+            ></div>
+        </div>
+
+        <div class="word-label">
+            Tippe dieses Wort
+        </div>
+
+        <div
+            id="word-display"
+            class="word-display"
+            aria-live="polite"
+            aria-label="Aktuelles Wort"
+        ></div>
+
+        <div class="input-wrapper">
+
+            <input
+                id="word-input"
+                class="input-box"
+                type="text"
+                placeholder="Hier tippen..."
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                aria-label="Aktuelles Wort eingeben"
+                disabled
+            >
+
+        </div>
+
+        <div class="input-hint">
+            Drücke keine Enter-Taste – das nächste Wort
+            erscheint automatisch.
+        </div>
+
+        <div class="stats">
+
+            <div class="stat">
+                <span class="stat-label">Zeit</span>
+
+                <span class="stat-value">
+                    <span id="timer">30</span>
+                    <span class="stat-unit">s</span>
+                </span>
+            </div>
+
+            <div class="stat">
+                <span class="stat-label">Score</span>
+
+                <span
+                    id="score"
+                    class="stat-value"
+                >0</span>
+            </div>
+
+            <div class="stat">
+                <span class="stat-label">Tempo</span>
+
+                <span class="stat-value">
+                    <span id="wpm">0</span>
+                    <span class="stat-unit">WPM</span>
+                </span>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ========================================
+         ERGEBNISSE
+    ======================================== -->
+
+    <section id="end-screen" class="screen">
+
+        <div class="menu-label">
+            Session abgeschlossen
+        </div>
+
+        <div class="result-icon">🏁</div>
+
+        <h2 class="result-title">
+            Spiel vorbei!
+        </h2>
+
+        <p class="result-subtitle" id="result-message">
+            Die Matrix wartet auf deine nächste Runde.
+        </p>
+
+        <div id="new-record" class="new-record">
+            ★ NEUER HIGHSCORE ★
+        </div>
+
+        <div class="result-grid">
+
+            <div class="result-card">
+                <span
+                    id="final-score"
+                    class="result-number"
+                >0</span>
+
+                <span class="result-name">
+                    Richtige Wörter
+                </span>
+            </div>
+
+            <div class="result-card">
+                <span
+                    id="final-wpm"
+                    class="result-number"
+                >0</span>
+
+                <span class="result-name">
+                    Wörter pro Minute
+                </span>
+            </div>
+
+            <div class="result-card">
+                <span
+                    id="final-accuracy"
+                    class="result-number"
+                >100%</span>
+
+                <span class="result-name">
+                    Genauigkeit
+                </span>
+            </div>
+
+            <div class="result-card">
+                <span
+                    id="final-characters"
+                    class="result-number"
+                >0</span>
+
+                <span class="result-name">
+                    Richtige Zeichen
+                </span>
+            </div>
+
+        </div>
+
+        <div class="button-row">
+
+            <button class="btn" id="restart-btn">
+                ↻ Nochmal spielen
+            </button>
+
+            <button
+                class="btn btn-secondary"
+                id="menu-btn"
+            >
+                Hauptmenü
+            </button>
+
+        </div>
+
+    </section>
+
+    <footer>
+        MATRIX TYPE 99 · VERSION 2.0
+    </footer>
+
+    <script>
+        "use strict";
+
+        /* ========================================
+           1. KONFIGURATION
+        ======================================== */
+
+        const GAME_DURATION = 30;
+
+        const WORDS = [
+            "matrix",
+            "tetris",
+            "cyberpunk",
+            "neon",
+            "pixel",
+            "coding",
+            "javascript",
+            "vector",
+            "grid",
+            "synthwave",
+            "arcade",
+            "speed",
+            "level",
+            "player",
+            "system",
+            "online",
+            "battle",
+            "combo",
+            "blocks",
+            "computer",
+            "keyboard",
+            "digital",
+            "future",
+            "hacker",
+            "network",
+            "terminal",
+            "program",
+            "robot",
+            "galaxy",
+            "quantum",
+            "energy",
+            "signal",
+            "binary",
+            "firewall",
+            "algorithm",
+            "database",
+            "internet",
+            "software",
+            "hardware",
+            "monitor",
+            "console",
+            "graphics",
+            "machine",
+            "virtual",
+            "reality",
+            "technology",
+            "neural",
+            "protocol",
+            "security",
+            "fire"
+        ];
+
+        const HIGH_SCORE_KEY = "matrixType99Highscore";
+
+        /* ========================================
+           2. ELEMENTE
+        ======================================== */
+
+        const elements = {
+            startScreen: document.getElementById("start-screen"),
+            gameScreen: document.getElementById("game-screen"),
+            endScreen: document.getElementById("end-screen"),
+
+            startBtn: document.getElementById("start-btn"),
+            restartBtn: document.getElementById("restart-btn"),
+            menuBtn: document.getElementById("menu-btn"),
+
+            highscore: document.getElementById("highscore"),
+
+            wordDisplay: document.getElementById("word-display"),
+            wordInput: document.getElementById("word-input"),
+
+            timer: document.getElementById("timer"),
+            score: document.getElementById("score"),
+            wpm: document.getElementById("wpm"),
+            timeBar: document.getElementById("time-bar"),
+
+            finalScore: document.getElementById("final-score"),
+            finalWpm: document.getElementById("final-wpm"),
+            finalAccuracy: document.getElementById("final-accuracy"),
+            finalCharacters: document.getElementById("final-characters"),
+
+            newRecord: document.getElementById("new-record"),
+            resultMessage: document.getElementById("result-message")
+        };
+
+        /* ========================================
+           3. SPIELZUSTAND
+        ======================================== */
+
+        const state = {
+            active: false,
+
+            score: 0,
+            timeLeft: GAME_DURATION,
+
+            currentWord: "",
+
+            // Zeitpunkte werden mit performance.now()
+            // gemessen, damit der Countdown präzise bleibt.
+            startTime: 0,
+            endTime: 0,
+
+            timerId: null,
+
+            // Statistik
+            correctCharacters: 0,
+            typedCharacters: 0,
+
+            // Verhindert, dass zweimal dasselbe Wort
+            // direkt hintereinander erscheint.
+            previousWord: ""
+        };
+
+        /* ========================================
+           4. HILFSFUNKTIONEN
+        ======================================== */
+
+        function showScreen(screenToShow) {
+            const screens = [
+                elements.startScreen,
+                elements.gameScreen,
+                elements.endScreen
+            ];
+
+            screens.forEach(screen => {
+                screen.classList.toggle(
+                    "active",
+                    screen === screenToShow
+                );
+            });
+        }
+
+        function getHighscore() {
+            try {
+                return Number(
+                    localStorage.getItem(HIGH_SCORE_KEY) || 0
+                );
+            } catch (error) {
+                // Das Spiel funktioniert auch, wenn der
+                // Browser lokalen Speicher blockiert.
+                return 0;
+            }
+        }
+
+        function saveHighscore(value) {
+            try {
+                localStorage.setItem(
+                    HIGH_SCORE_KEY,
+                    String(value)
+                );
+            } catch (error) {
+                // Ohne lokalen Speicher bleibt das Spiel
+                // weiterhin spielbar.
+            }
+        }
+
+        function updateHighscoreDisplay() {
+            elements.highscore.textContent =
+                `${getHighscore()} WPM`;
+        }
+
+        function getElapsedSeconds() {
+            if (!state.startTime) {
+                return 0;
+            }
+
+            const stopTime = state.active
+                ? performance.now()
+                : state.endTime;
+
+            return Math.max(
+                0,
+                (stopTime - state.startTime) / 1000
+            );
+        }
+
+        function calculateWPM() {
+            const elapsed = getElapsedSeconds();
+
+            if (elapsed <= 0) {
+                return 0;
+            }
+
+            // Standardisierte Schreibgeschwindigkeit:
+            // 5 richtige Zeichen entsprechen einem Wort.
+            return Math.round(
+                (state.correctCharacters / 5) /
+                (elapsed / 60)
+            );
+        }
+
+        function calculateAccuracy() {
+            if (state.typedCharacters === 0) {
+                return 100;
+            }
+
+            return Math.min(
+                100,
+                Math.round(
+                    state.correctCharacters /
+                    state.typedCharacters * 100
+                )
+            );
+        }
+
+        /* ========================================
+           5. WORTANZEIGE
+        ======================================== */
+
+        function renderWord() {
+            const input = elements.wordInput.value;
+
+            // Keine HTML-Strings aus Benutzereingaben:
+            // Jedes Zeichen wird als Text dargestellt.
+            elements.wordDisplay.replaceChildren();
+
+            for (
+                let index = 0;
+                index < state.currentWord.length;
+                index++
+            ) {
+                const letter = document.createElement("span");
+
+                letter.className = "letter";
+                letter.textContent = state.currentWord[index];
+
+                if (index < input.length) {
+                    if (
+                        input[index] ===
+                        state.currentWord[index]
+                    ) {
+                        letter.classList.add("correct");
+                    } else {
+                        letter.classList.add("wrong");
+                    }
+                }
+
+                elements.wordDisplay.appendChild(letter);
+            }
+        }
+
+        function nextWord() {
+            let word;
+
+            do {
+                const randomIndex = Math.floor(
+                    Math.random() * WORDS.length
+                );
+
+                word = WORDS[randomIndex];
+
+            } while (
+                WORDS.length > 1 &&
+                word === state.previousWord
+            );
+
+            state.previousWord = word;
+            state.currentWord = word;
+
+            elements.wordInput.value = "";
+
+            renderWord();
+        }
+
+        /* ========================================
+           6. SPIEL STARTEN
+        ======================================== */
+
+        function startGame() {
+            // Alte Timer immer zuerst stoppen.
+            stopTimer();
+
+            state.active = false;
+
+            state.score = 0;
+            state.timeLeft = GAME_DURATION;
+
+            state.correctCharacters = 0;
+            state.typedCharacters = 0;
+
+            state.currentWord = "";
+            state.previousWord = "";
+
+            state.startTime = 0;
+            state.endTime = 0;
+
+            // Anzeige zurücksetzen.
+            elements.score.textContent = "0";
+            elements.wpm.textContent = "0";
+            elements.timer.textContent = GAME_DURATION;
+
+            elements.timeBar.style.width = "100%";
+            elements.timeBar.classList.remove("danger");
+
+            elements.wordInput.value = "";
+            elements.wordInput.disabled = false;
+
+            elements.newRecord.classList.remove("show");
+
+            showScreen(elements.gameScreen);
+
+            // Neues Wort vorbereiten.
+            nextWord();
+
+            // Die Uhr beginnt erst, wenn das Spiel
+            // vollständig vorbereitet ist.
+            state.startTime = performance.now();
+            state.endTime = 0;
+            state.active = true;
+
+            // Sofortiger erster Tick.
+            updateTimer();
+
+            // Kurzer Aktualisierungsintervall für
+            // einen flüssigen Zeitbalken.
+            state.timerId = window.setInterval(
+                updateTimer,
+                50
+            );
+
+            // Fokus auf das Eingabefeld setzen.
+            requestAnimationFrame(() => {
+                if (state.active) {
+                    elements.wordInput.focus();
+                }
+            });
+        }
+
+        /* ========================================
+           7. EINGABE VERARBEITEN
+        ======================================== */
+
+        elements.wordInput.addEventListener(
+            "input",
+            event => {
+                if (!state.active) {
+                    return;
+                }
+
+                const input = elements.wordInput.value;
+
+                // Für die Genauigkeit zählen neu eingegebene
+                // Zeichen. Löschen reduziert die Anzahl nicht.
+                if (
+                    event.inputType &&
+                    event.inputType.startsWith("insert")
+                ) {
+                    const insertedData = event.data;
+
+                    if (insertedData !== null) {
+                        state.typedCharacters +=
+                            insertedData.length;
+                    }
+                }
+
+                renderWord();
+
+                // Das Wort ist vollständig korrekt.
+                if (input === state.currentWord) {
+                    state.score++;
+
+                    state.correctCharacters +=
+                        state.currentWord.length;
+
+                    elements.score.textContent = state.score;
+
+                    // Sofort das nächste Wort laden.
+                    nextWord();
+
+                    updateLiveStats();
+                }
+            }
+        );
+
+        /* ========================================
+           8. LIVE-STATISTIKEN
+        ======================================== */
+
+        function updateLiveStats() {
+            elements.wpm.textContent = calculateWPM();
+        }
+
+        /* ========================================
+           9. TIMER
+        ======================================== */
+
+        function updateTimer() {
+            if (!state.active) {
+                return;
+            }
+
+            const elapsed = getElapsedSeconds();
+
+            state.timeLeft = Math.max(
+                0,
+                GAME_DURATION - elapsed
+            );
+
+            elements.timer.textContent = Math.ceil(
+                state.timeLeft
+            );
+
+            const percentage = Math.max(
+                0,
+                (state.timeLeft / GAME_DURATION) * 100
+            );
+
+            elements.timeBar.style.width =
+                `${percentage}%`;
+
+            // Warnfarbe in den letzten fünf Sekunden.
+            elements.timeBar.classList.toggle(
+                "danger",
+                state.timeLeft <= 5
+            );
+
+            updateLiveStats();
+
+            if (state.timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function stopTimer() {
+            if (state.timerId !== null) {
+                window.clearInterval(state.timerId);
+                state.timerId = null;
+            }
+        }
+
+        /* ========================================
+           10. SPIELENDE
+        ======================================== */
+
+        function endGame() {
+            if (!state.active) {
+                return;
+            }
+
+            state.active = false;
+
+            state.endTime = performance.now();
+            state.timeLeft = 0;
+
+            stopTimer();
+
+            elements.wordInput.disabled = true;
+
+            elements.timer.textContent = "0";
+            elements.timeBar.style.width = "0%";
+
+            elements.wpm.textContent = calculateWPM();
+
+            const finalWPM = calculateWPM();
+            const accuracy = calculateAccuracy();
+
+            const oldHighscore = getHighscore();
+
+            const isNewRecord =
+                finalWPM > oldHighscore;
+
+            if (isNewRecord) {
+                saveHighscore(finalWPM);
+            }
+
+            // Ergebnisse anzeigen.
+            elements.finalScore.textContent =
+                state.score;
+
+            elements.finalWpm.textContent =
+                finalWPM;
+
+            elements.finalAccuracy.textContent =
+                `${accuracy}%`;
+
+            elements.finalCharacters.textContent =
+                state.correctCharacters;
+
+            elements.newRecord.classList.toggle(
+                "show",
+                isNewRecord
+            );
+
+            // Individuelle Rückmeldung.
+            if (state.score === 0) {
+                elements.resultMessage.textContent =
+                    "Jeder Anfang zählt. Starte eine neue Runde!";
+            } else if (finalWPM >= 60) {
+                elements.resultMessage.textContent =
+                    "Unglaublich! Du bist schneller als die Matrix!";
+            } else if (finalWPM >= 35) {
+                elements.resultMessage.textContent =
+                    "Starke Leistung! Deine Finger sind schnell.";
+            } else {
+                elements.resultMessage.textContent =
+                    "Gut gemacht! Trainiere weiter und knacke deinen Rekord.";
+            }
+
+            updateHighscoreDisplay();
+
+            showScreen(elements.endScreen);
+        }
+
+        /* ========================================
+           11. HAUPTMENÜ
+        ======================================== */
+
+        function showMainMenu() {
+            stopTimer();
+
+            state.active = false;
+
+            elements.wordInput.disabled = true;
+
+            showScreen(elements.startScreen);
+
+            updateHighscoreDisplay();
+        }
+
+        /* ========================================
+           12. BUTTONS
+        ======================================== */
+
+        elements.startBtn.addEventListener(
+            "click",
+            startGame
+        );
+
+        elements.restartBtn.addEventListener(
+            "click",
+            startGame
+        );
+
+        elements.menuBtn.addEventListener(
+            "click",
+            showMainMenu
+        );
+
+        /* ========================================
+           13. TASTATUR
+        ======================================== */
+
+        document.addEventListener(
+            "keydown",
+            event => {
+                // Während des Spiels soll Escape die
+                // laufende Runde kontrolliert beenden.
+                if (
+                    event.key === "Escape" &&
+                    state.active
+                ) {
+                    endGame();
+                }
+            }
+        );
+
+        /* ========================================
+           14. INITIALISIERUNG
+        ======================================== */
+
+        function init() {
+            updateHighscoreDisplay();
+
+            showScreen(elements.startScreen);
+
+            elements.wordInput.disabled = true;
+        }
+
+        init();
+
+    </script>
+
+</body>
+</html>
+

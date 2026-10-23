@@ -1,0 +1,8 @@
+Projektidee und Entwicklung
+
+Matrix Type 99:
+
+Inspiriert von Monkeytype entsteht ein Tippspiel im düsteren Neon-Look von Tetris 99 mit einer automatischen Highscore-Anzeige oben links. Das System läuft plattformunabhängig auf dem PC sowie auf Mobile (PE) und bietet nach der Geräteauswahl drei verschiedene Spielmodi mit dezenten Beschreibungen:
+• Overdrive-Chronometer: 30 Sekunden schnelles Tippen gegen die Zeit.
+• Marathon 400: Exakt 400 Wörter absolvieren mit einer laufenden Stoppuhr.
+• CPU-Showdown 99: Ein direktes Wettrennen gegen einen Bot mit einem Live-Fortschrittsbalken.
