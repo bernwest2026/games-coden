@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escape the Tsunami!</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #071b33;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    overflow: hidden;
+}
+
+h1 {
+    margin: 10px 0 5px;
+    font-size: clamp(22px, 4vw, 36px);
+    color: #66e5ff;
+    text-shadow: 0 0 15px #00aaff;
+}
+
+#hud {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 8px;
+    font-weight: bold;
+}
+
+#game {
+    display: block;
+    width: min(100%, 1000px);
+    height: auto;
+    margin: 0 auto;
+    border: 3px solid #49d9ff;
+    border-radius: 10px;
+    background: #87ddff;
+}
+
+#controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    padding: 13px 23px;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    background: #087fe5;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+button:active {
+    transform: scale(.94);
+    background: #0059a8;
+}
+
+#start {
+    background: #00a86b;
+}
+
+#help {
+    color: #c9eaff;
+    font-size: 13px;
+    padding: 0 10px 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🌊 ESCAPE THE TSUNAMI!</h1>
+
+<div id="hud">
+    <span>🏃 Strecke: <span id="distance">0</span> m</span>
+    <span>🪙 Münzen: <span id="coins">0</span></span>
+    <span>🏆 Rekord: <span id="best">0</span> m</span>
+</div>
+
+<canvas id="game" width="900" height="440"></canvas>
+
+<div id="controls">
+    <button id="jump">⬆ SPRINGEN</button>
+    <button id="start">▶ START / NEUSTART</button>
+</div>
+
+<div id="help">
+    Steuerung: Leertaste, W oder ↑ zum Springen ·
+    Auf dem Handy den SPRINGEN-Button drücken!
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const W = canvas.width;
+const H = canvas.height;
+const ground = 365;
+
+let running = false;
+let gameOver = false;
+let won = false;
+
+let distance = 0;
+let coins = 0;
+let speed = 4;
+let frame = 0;
+
+let best = Number(localStorage.getItem("tsunamiBest") || 0);
+document.getElementById("best").textContent = best;
+
+const player = {
+    x: 145,
+    y: ground - 48,
+    w: 34,
+    h: 48,
+    vy: 0,
+    jumping: false
+};
+
+let obstacles = [];
+let treasures = [];
+let particles = [];
+let clouds = [];
+
+for (let i = 0; i < 7; i++) {
+    clouds.push({
+        x: Math.random() * W,
+        y: 25 + Math.random() * 110,
+        s: 0.5 + Math.random()
+    });
+}
+
+function resetGame() {
+    running = true;
+    gameOver = false;
+    won = false;
+
+    distance = 0;
+    coins = 0;
+    speed = 4;
+    frame = 0;
+
+    obstacles = [];
+    treasures = [];
+    particles = [];
+
+    player.y = ground - player.h;
+    player.vy = 0;
+    player.jumping = false;
+
+    wave.x = -100;
+    wave.phase = 0;
+
+    document.getElementById("distance").textContent = 0;
+    document.getElementById("coins").textContent = 0;
+}
+
+const wave = {
+    x: -100,
+    phase: 0
+};
+
+function jump() {
+    if (!running || gameOver || won) return;
+
+    if (!player.jumping) {
+        player.vy = -13.5;
+        player.jumping = true;
+        burst(player.x + player.w / 2, player.y + player.h, "#ffffff", 5);
+    }
+}
+
+document.getElementById("jump").addEventListener("pointerdown", e => {
+    e.preventDefault();
+    jump();
+});
+
+document.getElementById("start").addEventListener("click", resetGame);
+
+document.addEventListener("keydown", e => {
+    if (["ArrowUp", " ", "w", "W"].includes(e.key)) {
+        e.preventDefault();
+
+        if (!running || gameOver || won) {
+            if (e.repeat) return;
+            resetGame();
+        } else if (!e.repeat) {
+            jump();
+        }
+    }
+});
+
+function burst(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 5,
+            vy: (Math.random() - 1) * 4,
+            life: 25 + Math.random() * 20,
+            color
+        });
+    }
+}
+
+function spawnObstacle() {
+    const type = Math.random() < 0.5 ? "rock" : "palm";
+
+    obstacles.push({
+        x: W + 30,
+        y: type === "rock" ? ground - 30 : ground - 52,
+        w: type === "rock" ? 32 : 27,
+        h: type === "rock" ? 30 : 52,
+        type
+    });
+}
+
+function spawnCoin() {
+    const y = ground - 65 - Math.random() * 85;
+
+    for (let i = 0; i < 4; i++) {
+        treasures.push({
+            x: W + 30 + i * 35,
+            y: y - Math.sin(i / 3 * Math.PI) * 18,
+            r: 10,
+            taken: false
+        });
+    }
+}
+
+function drawBackground() {
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#1689d4");
+    sky.addColorStop(0.7, "#8be4ff");
+    sky.addColorStop(1, "#d2f7ff");
+
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Sonne
+    ctx.fillStyle = "#fff3a0";
+    ctx.beginPath();
+    ctx.arc(760, 75, 33, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Wolken
+    clouds.forEach(c => {
+        ctx.fillStyle = "rgba(255,255,255,.85)";
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 22 * c.s, 0, Math.PI * 2);
+        ctx.arc(c.x + 22*c.s, c.y - 8*c.s, 26*c.s, 0, Math.PI*2);
+        ctx.arc(c.x + 48*c.s, c.y, 20*c.s, 0, Math.PI*2);
+        ctx.fill();
+
+        if (running) {
+            c.x -= 0.3 * c.s;
+            if (c.x < -100) c.x = W + 60;
+        }
+    });
+
+    // Berge im Hintergrund
+    ctx.fillStyle = "#83b8a0";
+    ctx.beginPath();
+    ctx.moveTo(0, ground);
+    ctx.lineTo(90, 220);
+    ctx.lineTo(175, ground);
+    ctx.lineTo(300, 245);
+    ctx.lineTo(405, ground);
+    ctx.lineTo(540, 205);
+    ctx.lineTo(680, ground);
+    ctx.lineTo(810, 235);
+    ctx.lineTo(900, ground);
+    ctx.closePath();
+    ctx.fill();
+
+    // Sicherer Berg am Ziel
+    ctx.fillStyle = "#43875b";
+    ctx.beginPath();
+    ctx.moveTo(710, ground);
+    ctx.lineTo(850, 145);
+    ctx.lineTo(1000, ground);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#f3ffff";
+    ctx.beginPath();
+    ctx.moveTo(817, 184);
+    ctx.lineTo(850, 145);
+    ctx.lineTo(883, 184);
+    ctx.lineTo(863, 177);
+    ctx.lineTo(850, 190);
+    ctx.lineTo(837, 177);
+    ctx.closePath();
+    ctx.fill();
+
+    // Strand
+    ctx.fillStyle = "#f5d58a";
+    ctx.fillRect(0, ground, W, H - ground);
+
+    // Strandlinien
+    ctx.fillStyle = "#e9bd68";
+    for (let x = -30; x < W; x += 75) {
+        ctx.fillRect(x - (distance * 2 % 75), ground + 28, 35, 3);
+    }
+
+    // Gras
+    ctx.fillStyle = "#3fbd63";
+    ctx.fillRect(0, ground - 7, W, 9);
+}
+
+function drawWave() {
+    wave.phase += 0.08;
+
+    const edge = wave.x;
+    const height = 220 + Math.sin(wave.phase) * 12;
+
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.moveTo(0, ground);
+    ctx.lineTo(0, ground - height);
+
+    for (let y = ground - height; y <= ground; y += 8) {
+        const wobble = Math.sin(y * 0.04 + wave.phase) * 13;
+        ctx.lineTo(edge + wobble, y);
+    }
+
+    ctx.lineTo(0, ground);
+    ctx.closePath();
+
+    const water = ctx.createLinearGradient(0, ground-height, 0, ground);
+    water.addColorStop(0, "#9effff");
+    water.addColorStop(0.25, "#08c5f4");
+    water.addColorStop(1, "#0053b8");
+
+    ctx.fillStyle = water;
+    ctx.fill();
+
+    // Schaum auf der Welle
+    ctx.strokeStyle = "#e5ffff";
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+
+    for (let y = ground - height; y <= ground; y += 9) {
+        const wobble = Math.sin(y * 0.04 + wave.phase) * 13;
+        if (y === ground - height) {
+            ctx.moveTo(edge + wobble, y);
+        } else {
+            ctx.lineTo(edge + wobble, y);
+        }
+    }
+
+    ctx.stroke();
+    ctx.restore();
+}
+
+function drawPlayer() {
+    const x = player.x;
+    const y = player.y;
+
+    ctx.save();
+
+    // Schatten
+    ctx.fillStyle = "rgba(0,0,0,.15)";
+    ctx.beginPath();
+    ctx.ellipse(x + 17, ground, 24, 5, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // Beine
+    ctx.strokeStyle = "#183d78";
+    ctx.lineWidth = 7;
+    ctx.lineCap = "round";
+
+    const run = running && !player.jumping ? Math.sin(frame * 0.45) * 8 : 0;
+
+    ctx.beginPath();
+    ctx.moveTo(x + 13, y + 33);
+    ctx.lineTo(x + 12 + run, y + 46);
+    ctx.moveTo(x + 23, y + 33);
+    ctx.lineTo(x + 24 - run, y + 46);
+    ctx.stroke();
+
+    // Körper
+    ctx.fillStyle = "#ff684c";
+    ctx.fillRect(x + 7, y + 15, 23, 23);
+
+    // Kopf
+    ctx.fillStyle = "#ffd1a3";
+    ctx.beginPath();
+    ctx.arc(x + 19, y + 10, 11, 0, Math.PI*2);
+    ctx.fill();
+
+    // Haare
+    ctx.fillStyle = "#533323";
+    ctx.beginPath();
+    ctx.arc(x + 18, y + 5, 10, Math.PI, Math.PI*2);
+    ctx.fill();
+
+    // Auge
+    ctx.fillStyle = "#14263c";
+    ctx.beginPath();
+    ctx.arc(x + 23, y + 10, 2, 0, Math.PI*2);
+    ctx.fill();
+
+    // Arm
+    ctx.strokeStyle = "#ffd1a3";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(x + 11, y + 19);
+    ctx.lineTo(x + 2, y + 27 + run/2);
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+function drawObstacle(o) {
+    if (o.type === "rock") {
+        ctx.fillStyle = "#7a828a";
+        ctx.beginPath();
+        ctx.moveTo(o.x, o.y + o.h);
+        ctx.lineTo(o.x + 4, o.y + 12);
+        ctx.lineTo(o.x + 16, o.y);
+        ctx.lineTo(o.x + o.w, o.y + 9);
+        ctx.lineTo(o.x + o.w, o.y + o.h);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "#aeb6bb";
+        ctx.fillRect(o.x + 8, o.y + 11, 8, 4);
+    } else {
+        // Palme
+        ctx.strokeStyle = "#86552b";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.moveTo(o.x + 13, o.y + o.h);
+        ctx.lineTo(o.x + 12, o.y + 8);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#208d45";
+        ctx.lineWidth = 7;
+
+        for (let i = 0; i < 5; i++) {
+            const a = Math.PI + i * Math.PI / 4;
+
+            ctx.beginPath();
+            ctx.moveTo(o.x + 12, o.y + 10);
+            ctx.lineTo(
+                o.x + 12 + Math.cos(a) * 24,
+                o.y + 10 + Math.sin(a) * 18
+            );
+            ctx.stroke();
+        }
+    }
+}
+
+function drawCoin(c) {
+    if (c.taken) return;
+
+    ctx.fillStyle = "#ffcc26";
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.r, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#ff9d00";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = "#fff4b0";
+    ctx.font = "bold 13px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("$", c.x, c.y + 1);
+}
+
+function drawParticles() {
+    particles.forEach(p => {
+        ctx.globalAlpha = Math.max(0, p.life / 40);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 4, 4);
+        ctx.globalAlpha = 1;
+    });
+}
+
+function collide(a, b) {
+    return a.x < b.x + b.w &&
+           a.x + a.w > b.x &&
+           a.y < b.y + b.h &&
+           a.y + a.h > b.y;
+}
+
+function endGame(victory) {
+    running = false;
+    gameOver = !victory;
+    won = victory;
+
+    if (distance > best) {
+        best = Math.floor(distance);
+        localStorage.setItem("tsunamiBest", best);
+        document.getElementById("best").textContent = best;
+    }
+
+    drawOverlay();
+}
+
+function drawOverlay() {
+    ctx.fillStyle = "rgba(3, 15, 38, .78)";
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    ctx.font = "bold 43px Arial";
+    ctx.fillStyle = won ? "#7dffb1" : "#ff6666";
+
+    ctx.fillText(
+        won ? "🏆 DU BIST GERETTET!" : "🌊 VOM TSUNAMI ERWISCHT!",
+        W/2, H/2 - 50
+    );
+
+    ctx.font = "bold 24px Arial";
+    ctx.fillStyle = "white";
+    ctx.fillText(
+        "Strecke: " + Math.floor(distance) + " m   |   Münzen: " + coins,
+        W/2, H/2 + 5
+    );
+
+    ctx.font = "19px Arial";
+    ctx.fillStyle = "#b8efff";
+    ctx.fillText(
+        "Drücke START / NEUSTART zum erneuten Spielen",
+        W/2, H/2 + 55
+    );
+}
+
+function update() {
+    if (!running) return;
+
+    frame++;
+
+    distance += speed * 0.09;
+    speed = Math.min(7, 4 + distance / 600);
+
+    document.getElementById("distance").textContent =
+        Math.floor(distance);
+
+    // Physik
+    player.vy += 0.62;
+    player.y += player.vy;
+
+    if (player.y >= ground - player.h) {
+        player.y = ground - player.h;
+        player.vy = 0;
+        player.jumping = false;
+    }
+
+    // Welle rückt näher
+    wave.x += 0.85 + distance / 3500;
+
+    // Hindernisse
+    if (frame % Math.max(42, Math.floor(78 - speed * 4)) === 0) {
+        spawnObstacle();
+    }
+
+    obstacles.forEach(o => {
+        o.x -= speed;
+
+        if (collide(player, {
+            x: o.x + 5,
+            y: o.y + 5,
+            w: o.w - 10,
+            h: o.h - 5
+        })) {
+            endGame(false);
+        }
+    });
+
+    obstacles = obstacles.filter(o => o.x > -80);
+
+    // Münzen
+    if (frame % 100 === 0) spawnCoin();
+
+    treasures.forEach(c => {
+        c.x -= speed;
+
+        if (!c.taken) {
+            const dx = player.x + player.w/2 - c.x;
+            const dy = player.y + player.h/2 - c.y;
+
+            if (Math.hypot(dx, dy) < 27) {
+                c.taken = true;
+                coins++;
+                document.getElementById("coins").textContent = coins;
+                burst(c.x, c.y, "#ffdb4a", 9);
+            }
+        }
+    });
+
+    treasures = treasures.filter(c => c.x > -30 && !c.taken);
+
+    // Partikel
+    particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.12;
+        p.life--;
+    });
+
+    particles = particles.filter(p => p.life > 0);
+
+    // Sieg am sicheren Berg
+    if (distance >= 1500) {
+        endGame(true);
+        return;
+    }
+
+    // Die Welle erwischt den Spieler
+    if (wave.x > player.x - 8) {
+        endGame(false);
+        return;
+    }
+}
+
+function draw() {
+    drawBackground();
+
+    // Welle hinter den Hindernissen
+    drawWave();
+
+    obstacles.forEach(drawObstacle);
+    treasures.forEach(drawCoin);
+
+    drawPlayer();
+    drawParticles();
+
+    // Distanzanzeige im Spiel
+    ctx.fillStyle = "rgba(0,35,75,.65)";
+    ctx.fillRect(12, 12, 175, 37);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText("🌊 FLIEH! " + Math.floor(distance) + " m", 22, 31);
+
+    // Warnung, wenn die Welle nahe ist
+    if (wave.x > player.x - 180) {
+        ctx.fillStyle = "#ff3030";
+        ctx.font = "bold 25px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("⚠️ DIE WELLE KOMMT!", W/2, 75);
+    }
+
+    if (!running && !gameOver && !won) {
+        ctx.fillStyle = "rgba(3,15,38,.55)";
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 42px Arial";
+        ctx.fillText("BEREIT?", W/2, H/2 - 25);
+
+        ctx.font = "21px Arial";
+        ctx.fillStyle = "#c9f4ff";
+        ctx.fillText(
+            "Drücke START und fliehe vor der Riesenwelle!",
+            W/2, H/2 + 25
+        );
+    }
+
+    if (gameOver || won) drawOverlay();
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
