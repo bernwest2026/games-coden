@@ -1,0 +1,3 @@
+prompt für chatgpt 16.10.2026
+
+programmiere für mich ein spiel in html zum spielen in webbrowsern. das spiel heisst "wortomat" und soll zufällig worte erfinden: präfixe und suffixe sollen an wortstämme geheftet werden. nur für deutsche sprache. die zufallswörter müssen nicht sinnvoll sein. verwende dazu eine liste der auffindbaren deutschen präfixe, suffixe und wortsämme. mach einen knopf zum generieren des wortes. bei erneutem drücken soll das neue wort zuoberst auf die liste gesetzt werden die entsteht durch immer wieder drücken.

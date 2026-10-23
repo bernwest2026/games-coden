@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wortomat – Die Fantasiewortmaschine</title>
+
+<style>
+    :root {
+        --background: #111827;
+        --panel: #1f2937;
+        --accent: #a78bfa;
+        --accent2: #67e8f9;
+        --text: #f9fafb;
+        --muted: #9ca3af;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+            radial-gradient(ellipse at top, #312e81 0%, transparent 55%),
+            var(--background);
+        color: var(--text);
+        font-family: system-ui, -apple-system, sans-serif;
+        padding: 30px 16px;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 760px;
+        margin: 0 auto;
+    }
+
+    header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .logo {
+        font-size: 48px;
+        margin-bottom: 5px;
+    }
+
+    h1 {
+        font-size: clamp(36px, 8vw, 60px);
+        line-height: 1.1;
+        margin: 0;
+        letter-spacing: -2px;
+        font-weight: 900;
+        background: linear-gradient(90deg, #c4b5fd, #67e8f9);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .subtitle {
+        color: var(--muted);
+        font-size: 16px;
+        margin-top: 12px;
+    }
+
+    .machine {
+        background: rgba(31, 41, 55, 0.92);
+        border: 1px solid #374151;
+        border-radius: 24px;
+        padding: 30px 20px;
+        text-align: center;
+        box-shadow: 0 20px 60px #0003;
+    }
+
+    .label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    #word {
+        font-size: clamp(30px, 8vw, 52px);
+        font-weight: 900;
+        overflow-wrap: anywhere;
+        margin: 24px 0;
+        min-height: 65px;
+        color: var(--accent2);
+        text-shadow: 0 0 30px #67e8f933;
+    }
+
+    #word.new {
+        animation: appear 0.3s ease-out;
+    }
+
+    @keyframes appear {
+        from {
+            opacity: 0;
+            transform: translateY(10px) scale(.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .parts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+        margin: 20px 0;
+        min-height: 30px;
+    }
+
+    .part {
+        background: #374151;
+        border: 1px solid #4b5563;
+        color: #ddd6fe;
+        border-radius: 8px;
+        padding: 7px 12px;
+        font-size: 13px;
+    }
+
+    button {
+        font: inherit;
+        cursor: pointer;
+        border: none;
+        transition: transform .15s, filter .15s;
+    }
+
+    button:hover {
+        filter: brightness(1.12);
+        transform: translateY(-2px);
+    }
+
+    button:active {
+        transform: scale(.98);
+    }
+
+    .generate {
+        display: block;
+        width: 100%;
+        max-width: 400px;
+        margin: 24px auto 0;
+        padding: 18px 22px;
+        border-radius: 14px;
+        background: linear-gradient(100deg, #8b5cf6, #6366f1);
+        color: white;
+        font-size: 19px;
+        font-weight: 800;
+        box-shadow: 0 8px 25px #6366f144;
+    }
+
+    .hint {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 14px 0 0;
+    }
+
+    .history {
+        margin-top: 28px;
+        background: rgba(31, 41, 55, 0.85);
+        border: 1px solid #374151;
+        border-radius: 20px;
+        overflow: hidden;
+    }
+
+    .history-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 20px;
+        border-bottom: 1px solid #374151;
+    }
+
+    .history-header h2 {
+        margin: 0;
+        font-size: 19px;
+    }
+
+    #count {
+        color: var(--muted);
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    #historyList {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .history-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 15px 20px;
+        border-bottom: 1px solid #374151;
+        animation: appear .25s ease-out;
+    }
+
+    .history-item:last-child {
+        border-bottom: none;
+    }
+
+    .number {
+        color: #6b7280;
+        font-size: 13px;
+        min-width: 30px;
+    }
+
+    .history-word {
+        flex: 1;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    .history-item:first-child .history-word {
+        color: var(--accent2);
+    }
+
+    .copy {
+        background: #374151;
+        color: #d1d5db;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    .empty {
+        text-align: center;
+        color: var(--muted);
+        padding: 30px 15px;
+        line-height: 1.6;
+    }
+
+    .footer {
+        text-align: center;
+        color: #6b7280;
+        font-size: 12px;
+        margin-top: 25px;
+    }
+
+    .footer button {
+        background: none;
+        color: #a5b4fc;
+        text-decoration: underline;
+        padding: 4px;
+    }
+
+    @media (max-width: 480px) {
+        body {
+            padding: 20px 12px;
+        }
+
+        .machine {
+            padding: 25px 14px;
+        }
+
+        .history-item {
+            padding: 13px 12px;
+            gap: 10px;
+        }
+
+        .history-header {
+            padding: 16px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <div class="logo">⚙️</div>
+        <h1>WORTOMAT</h1>
+        <p class="subtitle">
+            Die fantastische Maschine für unsinnige Wörter.
+        </p>
+    </header>
+
+    <main>
+        <section class="machine">
+
+            <div class="label">Deine Wortschöpfung</div>
+
+            <div id="word" aria-live="polite">
+                Wortomat
+            </div>
+
+            <div class="parts" id="parts">
+                <span class="part">Bereit</span>
+                <span class="part">für</span>
+                <span class="part">Unsinn?</span>
+            </div>
+
+            <button class="generate" id="generateButton"
+                    onclick="generateWord()">
+                ✨ Neues Wort erfinden
+            </button>
+
+            <p class="hint">
+                Jeder Klick erschafft ein neues Wort.
+            </p>
+
+        </section>
+
+        <section class="history">
+
+            <div class="history-header">
+                <h2>📚 Wortarchiv</h2>
+                <span id="count">0 Wörter</span>
+            </div>
+
+            <ol id="historyList">
+                <li class="empty">
+                    Hier erscheinen deine Wortschöpfungen.<br>
+                    Drücke den Knopf und lass die Maschine rattern!
+                </li>
+            </ol>
+
+        </section>
+    </main>
+
+    <div class="footer">
+        <p>100 % Fantasie · 0 % Wörterbuchpflicht</p>
+        <button onclick="clearHistory()">Wortarchiv leeren</button>
+    </div>
+
+</div>
+
+<script>
+"use strict";
+
+/*
+ * WORTOMAT
+ * Ein Fantasiewortgenerator für die deutsche Sprache.
+ *
+ * Die Wortlisten können beliebig erweitert werden.
+ */
+
+// Deutsche Präfixe und präfixartige Wortbausteine
+const praefixe = [
+    "ab", "an", "auf", "aus", "bei", "be", "da",
+    "dar", "durch", "ein", "ent", "emp", "er",
+    "fehl", "fort", "gegen", "ge", "hinter", "hin",
+    "her", "los", "mit", "nach", "neben", "über",
+    "um", "unter", "ur", "ver", "vor", "weg",
+    "weiter", "wider", "zer", "zusammen", "zwischen",
+    "super", "hyper", "ultra", "pseudo", "mini",
+    "maxi", "extra", "mega", "un", "miss", "voll",
+    "halb", "sonder", "all", "stein", "zauber",
+    "quasi", "knall", "flatter", "rückwärts"
+];
+
+// Deutsche Wortstämme und wortähnliche Grundformen
+const wortstaemme = [
+    "blubber", "flimmer", "knister", "plapper",
+    "schlummer", "glitzer", "krakel", "murmel",
+    "zauber", "donner", "flunker", "wusel",
+    "schnatter", "brabbel", "kribbel", "krabbel",
+    "flatter", "schwurbel", "knuddel", "schnurps",
+    "pluster", "knusper", "brösel", "funkel",
+    "schunkel", "quassel", "wackel", "zappel",
+    "rumpel", "kicher", "mumpf", "tüdel",
+    "dusel", "kringel", "schlabber", "knabber",
+    "schnips", "knall", "quiek", "muffel",
+    "schlotter", "flutsch", "brummel", "pumper",
+    "krummel", "schnörkel", "trommel", "plätscher",
+    "gluck", "schlurf", "wunder", "schweb",
+    "nebel", "flunker", "kringel", "sause",
+    "ratter", "klapper", "schimmer", "schnuffel",
+    "kuller", "dödel", "schwurbel", "mumpel",
+    "flaps", "knispel", "zischel", "plinker",
+    "dudel", "schlängel", "wisper", "brutzel",
+    "schrumpel", "krissel", "puzzle", "flunker",
+    "glibber", "schlabber", "tüftel", "rümpel",
+    "schmurgel", "quarkel", "fluschel", "plong",
+    "kringel", "schnurzel", "wibbel", "klunker",
+    "brabbel", "flunker", "zunder", "knorzel",
+    "schlonz", "mumpitz", "plüsch", "wuschel",
+    "dampf", "quirl", "schlurf", "glotz",
+    "wack", "knuff", "schrill", "plumps",
+    "schlumpf", "kröt", "flaus", "grummel",
+    "blitz", "schmunzel", "flunker", "krakel"
+];
+
+// Deutsche und deutschsprachig verwendete Suffixe
+const suffixe = [
+    "chen", "lein", "ling", "er", "ler", "ner",
+    "lerich", "rich", "bold", "bart", "fried",
+    "mut", "mund", "bert", "hard", "hold",
+    "ig", "lich", "isch", "sam", "haft", "bar",
+    "los", "voll", "selig", "mäßig", "artig",
+    "ischkeit", "igkeit", "lichkeit", "heit",
+    "keit", "schaft", "tum", "nis", "sal",
+    "sel", "ei", "erei", "werk", "zeug",
+    "wesen", "ding", "kram", "kugel", "wurm",
+    "omat", "inator", "otron", "ismus", "ist",
+    "istik", "ologie", "arium", "atorium",
+    "ikus", "ikuschen", "esk", "abel", "ibel",
+    "ös", "ern", "eln", "ieren", "ier",
+    "barometer", "maschine", "meister", "monster",
+    "phant", "fant", "fex", "fatz", "batz",
+    "pups", "wupp", "dings", "bums", "kröte",
+    "flöte", "nator", "inator", "lingo", "ikus",
+    "saurus", "bert", "huber", "wumms", "knall",
+    "tronic", "zilla", "bertchen", "omatiker"
+];
+
+// Optional: zusätzliche Wortenden für besonders absurde Ergebnisse
+const sonderEndungen = [
+    "bär", "frosch", "drache", "gurke", "rakete",
+    "rakel", "nudel", "keks", "pudding", "socke",
+    "kanone", "krokodil", "kartoffel", "raketchen",
+    "quatsch", "knödel", "propeller", "zauberling",
+    "schneck", "hamster", "hummel", "krake"
+];
+
+let history = [];
+let wordNumber = 0;
+
+/**
+ * Zufälliges Element aus einem Array auswählen.
+ */
+function zufall(array) {
+    return array[Math.floor(Math.random() * array.length)];
+}
+
+/**
+ * Zufällige Entscheidung anhand einer Wahrscheinlichkeit.
+ */
+function chance(probability) {
+    return Math.random() < probability;
+}
+
+/**
+ * Erstellt eine neue Wortkombination.
+ *
+ * Das Wort kann ein Präfix, mehrere Wortstämme,
+ * ein Suffix oder eine zusätzliche Sonderendung enthalten.
+ */
+function createWord() {
+    let prefix = "";
+    let stem = zufall(wortstaemme);
+    let suffix = "";
+
+    // In etwa 75 % der Fälle ein Präfix verwenden.
+    if (chance(0.75)) {
+        prefix = zufall(praefixe);
+    }
+
+    // In etwa 35 % der Fälle zwei Wortstämme kombinieren.
+    if (chance(0.35)) {
+        const secondStem = zufall(wortstaemme);
+
+        // Doppelungen möglichst vermeiden.
+        if (secondStem !== stem) {
+            stem += secondStem;
+        }
+    }
+
+    // In etwa 85 % der Fälle ein Suffix anhängen.
+    if (chance(0.85)) {
+        suffix = zufall(suffixe);
+    }
+
+    // Gelegentlich noch eine zusätzliche absurde Endung.
+    if (chance(0.15)) {
+        suffix += zufall(sonderEndungen);
+    }
+
+    let word = prefix + stem + suffix;
+
+    // Das erste Zeichen großschreiben.
+    word = word.charAt(0).toLocaleUpperCase("de-DE") +
+           word.slice(1);
+
+    return {
+        word: word,
+        prefix: prefix || "—",
+        stem: stem,
+        suffix: suffix || "—"
+    };
+}
+
+/**
+ * Erzeugt ein Wort, zeigt seine Bestandteile an
+ * und fügt es an den Anfang des Archivs.
+ */
+function generateWord() {
+    const result = createWord();
+
+    wordNumber++;
+
+    // Neues Wort anzeigen.
+    const wordElement = document.getElementById("word");
+
+    wordElement.classList.remove("new");
+
+    // Animation bei jedem Klick neu starten.
+    void wordElement.offsetWidth;
+
+    wordElement.textContent = result.word;
+    wordElement.classList.add("new");
+
+    // Verwendete Wortbausteine anzeigen.
+    const partsElement = document.getElementById("parts");
+    partsElement.replaceChildren();
+
+    const parts = [
+        ["Präfix", result.prefix],
+        ["Stamm", result.stem],
+        ["Suffix", result.suffix]
+    ];
+
+    parts.forEach(([label, value]) => {
+        const element = document.createElement("span");
+        element.className = "part";
+        element.textContent = label + ": " + value;
+        partsElement.appendChild(element);
+    });
+
+    // Das neue Wort kommt immer ganz nach oben.
+    history.unshift(result);
+
+    renderHistory();
+}
+
+/**
+ * Baut die Liste neu auf.
+ * Das zuletzt generierte Wort steht an Position 1.
+ */
+function renderHistory() {
+    const list = document.getElementById("historyList");
+    const count = document.getElementById("count");
+
+    list.replaceChildren();
+
+    count.textContent =
+        history.length + (history.length === 1 ? " Wort" : " Wörter");
+
+    if (history.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "empty";
+        empty.innerHTML =
+            "Hier erscheinen deine Wortschöpfungen.<br>" +
+            "Drücke den Knopf und lass die Maschine rattern!";
+
+        list.appendChild(empty);
+        return;
+    }
+
+    history.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.className = "history-item";
+
+        const number = document.createElement("span");
+        number.className = "number";
+        number.textContent = "#" + (index + 1);
+
+        const word = document.createElement("span");
+        word.className = "history-word";
+        word.textContent = item.word;
+
+        const copyButton = document.createElement("button");
+        copyButton.className = "copy";
+        copyButton.textContent = "Kopieren";
+        copyButton.setAttribute(
+            "aria-label",
+            item.word + " kopieren"
+        );
+
+        copyButton.addEventListener("click", () => {
+            copyWord(item.word, copyButton);
+        });
+
+        li.append(number, word, copyButton);
+        list.appendChild(li);
+    });
+}
+
+/**
+ * Kopiert ein Wort in die Zwischenablage.
+ */
+async function copyWord(word, button) {
+    try {
+        await navigator.clipboard.writeText(word);
+        button.textContent = "Kopiert!";
+    } catch (error) {
+        // Fallback für Browser, die die Clipboard-API
+        // bei lokal geöffneten HTML-Dateien nicht erlauben.
+        const textarea = document.createElement("textarea");
+        textarea.value = word;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+            document.execCommand("copy");
+            button.textContent = "Kopiert!";
+        } catch (fallbackError) {
+            button.textContent = "Nicht möglich";
+        }
+
+        textarea.remove();
+    }
+
+    setTimeout(() => {
+        button.textContent = "Kopieren";
+    }, 1200);
+}
+
+/**
+ * Löscht das gesamte Archiv nach Rückfrage.
+ */
+function clearHistory() {
+    if (history.length === 0) {
+        return;
+    }
+
+    const confirmed = confirm(
+        "Möchtest du wirklich alle Wörter aus dem Archiv löschen?"
+    );
+
+    if (confirmed) {
+        history = [];
+        renderHistory();
+    }
+}
+
+// Auch die Tastatur bedienen lassen:
+// Leertaste oder Enter erzeugt ein neues Wort,
+// sofern nicht gerade ein anderer Button fokussiert ist.
+document.addEventListener("keydown", event => {
+    if (
+        (event.code === "Space" || event.code === "Enter") &&
+        event.target.tagName !== "BUTTON" &&
+        event.target.tagName !== "INPUT" &&
+        event.target.tagName !== "TEXTAREA"
+    ) {
+        event.preventDefault();
+        generateWord();
+    }
+});
+</script>
+
+</body>
+</html>
