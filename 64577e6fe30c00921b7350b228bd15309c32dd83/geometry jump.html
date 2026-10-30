@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Geometry Dash 2</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    overflow: hidden;
+    background: #080817;
+    color: white;
+    font-family: Arial, sans-serif;
+    touch-action: manipulation;
+}
+
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100dvh;
+}
+
+#hud {
+    position: fixed;
+    top: 15px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    pointer-events: none;
+    text-shadow: 0 0 12px #00ffff;
+}
+
+#score {
+    font-size: 32px;
+    font-weight: bold;
+}
+
+#info {
+    color: #00ffff;
+    font-size: 12px;
+    letter-spacing: 4px;
+    margin-top: 5px;
+}
+
+#jumps {
+    font-size: 14px;
+    margin-top: 8px;
+}
+
+#overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: #050515cc;
+}
+
+.panel {
+    width: min(420px, 100%);
+    padding: 30px 22px;
+    text-align: center;
+    border: 2px solid #00ffff;
+    border-radius: 18px;
+    background: #11132df5;
+    box-shadow: 0 0 35px #00ffff44;
+}
+
+h1 {
+    font-size: clamp(32px, 8vw, 48px);
+    color: #00ffff;
+    text-shadow: 0 0 18px #00ffff;
+    margin-bottom: 15px;
+}
+
+p {
+    line-height: 1.8;
+    color: #d6eaff;
+    margin-bottom: 20px;
+}
+
+button {
+    border: 0;
+    border-radius: 10px;
+    padding: 15px 32px;
+    background: linear-gradient(135deg, #00ffff, #1680ff);
+    color: #071020;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.small {
+    margin: 15px 0 0;
+    font-size: 12px;
+    color: #8299c8;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="hud">
+    <div id="score">0</div>
+    <div id="info">GEOMETRY DASH 2</div>
+    <div id="jumps">SPRÜNGE: 2/2</div>
+</div>
+
+<div id="overlay">
+    <div class="panel">
+        <h1 id="title">GEOMETRY<br>DASH 2</h1>
+
+        <p id="message">
+            🪚 Drehende Kreissägen<br>
+            ⚡ Laser und schwebende Blöcke<br>
+            🔺 Neue Stachel-Kombinationen<br>
+            🦘 Doppelsprung!<br><br>
+            Wie weit schaffst du es?
+        </p>
+
+        <button id="start">SPIELEN</button>
+
+        <p class="small">
+            LEERTASTE · KLICKEN · TIPPen
+        </p>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const overlay = document.getElementById("overlay");
+const startButton = document.getElementById("start");
+const scoreDisplay = document.getElementById("score");
+const jumpsDisplay = document.getElementById("jumps");
+
+let W, H, ground;
+let running = false;
+let dead = false;
+let score = 0;
+let best = Number(localStorage.getItem("gd2Best") || 0);
+let speed = 9;
+let frame = 0;
+let spawnTimer = 60;
+let lastTime = 0;
+
+let obstacles = [];
+let particles = [];
+
+const player = {
+    x: 100,
+    y: 0,
+    size: 34,
+    vy: 0,
+    gravity: 0.72,
+    jumpPower: -13.8,
+    rotation: 0,
+    jumpsLeft: 2
+};
+
+function resize() {
+    const oldGround = ground;
+
+    W = window.innerWidth;
+    H = window.innerHeight;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    ground = H * 0.80;
+
+    if (!running || player.y + player.size >= oldGround) {
+        player.y = ground - player.size;
+    }
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+function startGame() {
+    score = 0;
+    speed = 9;
+    frame = 0;
+    spawnTimer = 60;
+
+    obstacles = [];
+    particles = [];
+
+    player.y = ground - player.size;
+    player.vy = 0;
+    player.rotation = 0;
+    player.jumpsLeft = 2;
+
+    running = true;
+    dead = false;
+
+    overlay.style.display = "none";
+    lastTime = performance.now();
+
+    updateHUD();
+}
+
+function updateHUD() {
+    scoreDisplay.textContent = score;
+    jumpsDisplay.textContent = "SPRÜNGE: " + player.jumpsLeft + "/2";
+}
+
+function burst(x, y, color, amount) {
+    for (let i = 0; i < amount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const force = Math.random() * 5 + 1;
+
+        particles.push({
+            x, y,
+            vx: Math.cos(angle) * force,
+            vy: Math.sin(angle) * force,
+            life: 35,
+            color
+        });
+    }
+}
+
+// DOPPELSPRUNG
+function jump() {
+    if (!running || player.jumpsLeft <= 0) return;
+
+    player.vy = player.jumpPower;
+    player.jumpsLeft--;
+
+    burst(
+        player.x + player.size / 2,
+        player.y + player.size,
+        player.jumpsLeft === 1 ? "#00ffff" : "#ff00ff",
+        12
+    );
+
+    updateHUD();
+}
+
+function gameOver() {
+    if (!running) return;
+
+    running = false;
+    dead = true;
+
+    if (score > best) {
+        best = score;
+        localStorage.setItem("gd2Best", best);
+    }
+
+    burst(
+        player.x + player.size / 2,
+        player.y + player.size / 2,
+        "#ff3366",
+        30
+    );
+
+    document.getElementById("title").innerHTML = "GAME<br>OVER";
+
+    document.getElementById("message").innerHTML =
+        "Punkte: <b>" + score + "</b><br>" +
+        "Rekord: <b>" + best + "</b><br><br>" +
+        "Versuche es noch einmal!";
+
+    startButton.textContent = "NOCHMAL SPIELEN";
+    overlay.style.display = "flex";
+}
+
+// VERSCHIEDENE HINDERNISSE
+function spawnObstacle() {
+    const type = Math.floor(Math.random() * 5);
+
+    if (type === 0) {
+        // Einzelne Stachelgruppe
+        obstacles.push({
+            type: "spikes",
+            x: W + 30,
+            w: 42,
+            h: 38,
+            count: 1
+        });
+
+    } else if (type === 1) {
+        // Mehrere Stacheln
+        obstacles.push({
+            type: "spikes",
+            x: W + 30,
+            w: 95,
+            h: 38,
+            count: 3
+        });
+
+    } else if (type === 2) {
+        // Schwebender Block
+        obstacles.push({
+            type: "floating",
+            x: W + 30,
+            w: 43,
+            h: 43,
+            y: ground - 105,
+            phase: Math.random() * 6
+        });
+
+    } else if (type === 3) {
+        // Drehende Kreissäge
+        obstacles.push({
+            type: "saw",
+            x: W + 30,
+            w: 44,
+            h: 44,
+            y: ground - 23 - 22,
+            angle: 0
+        });
+
+    } else {
+        // Laser-Barriere am Boden
+        obstacles.push({
+            type: "laser",
+            x: W + 30,
+            w: 22,
+            h: 72,
+            phase: Math.random() * 6
+        });
+    }
+
+    // Ab und zu eine zweite Herausforderung.
+    if (score > 80 && Math.random() < 0.22) {
+        obstacles.push({
+            type: "spikes",
+            x: W + 155,
+            w: 65,
+            h: 38,
+            count: 2
+        });
+    }
+}
+
+function update(dt) {
+    if (!running) return;
+
+    frame += dt;
+
+    score = Math.floor(frame / 5);
+    speed = Math.min(9 + score / 110, 20);
+
+    updateHUD();
+
+    // Spielerbewegung
+    player.vy += player.gravity * dt;
+    player.y += player.vy * dt;
+
+    if (player.y + player.size >= ground) {
+        player.y = ground - player.size;
+        player.vy = 0;
+        player.jumpsLeft = 2;
+
+        player.rotation =
+            Math.round(player.rotation / (Math.PI / 2)) *
+            (Math.PI / 2);
+    } else {
+        player.rotation += 0.12 * dt;
+    }
+
+    // Hindernisse erzeugen
+    spawnTimer -= dt;
+
+    if (spawnTimer <= 0) {
+        spawnObstacle();
+
+        spawnTimer = Math.max(
+            46,
+            83 - speed * 1.5 + Math.random() * 32
+        );
+    }
+
+    // Kollisionen
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+
+        o.x -= speed * dt;
+
+        let hit = false;
+
+        const px = player.x + 7;
+        const py = player.y + 7;
+        const ps = player.size - 14;
+
+        if (o.type === "spikes") {
+            // Mehrere dreieckige Stacheln
+            const sw = o.w / o.count;
+
+            for (let j = 0; j < o.count; j++) {
+                const sx = o.x + j * sw;
+
+                const overlapX =
+                    px < sx + sw - 4 &&
+                    px + ps > sx + 4;
+
+                const overlapY =
+                    py + ps > ground - o.h + 10;
+
+                if (overlapX && overlapY) {
+                    hit = true;
+                    break;
+                }
+            }
+
+        } else if (o.type === "floating") {
+            // Block bewegt sich leicht auf und ab
+            o.phase += 0.035 * dt;
+
+            const by = o.y + Math.sin(o.phase) * 12;
+
+            hit =
+                px < o.x + o.w &&
+                px + ps > o.x &&
+                py < by + o.h &&
+                py + ps > by;
+
+        } else if (o.type === "saw") {
+            // Kreisförmige Kollisionsfläche
+            o.angle += 0.15 * dt;
+
+            const cx = o.x + o.w / 2;
+            const cy = o.y + o.h / 2;
+
+            const closestX = Math.max(
+                px, Math.min(cx, px + ps)
+            );
+
+            const closestY = Math.max(
+                py, Math.min(cy, py + ps)
+            );
+
+            const dx = cx - closestX;
+            const dy = cy - closestY;
+
+            hit = dx * dx + dy * dy < 19 * 19;
+
+        } else if (o.type === "laser") {
+            o.phase += 0.05 * dt;
+
+            // Laser leuchtet immer, flackert aber optisch.
+            hit =
+                px < o.x + o.w &&
+                px + ps > o.x &&
+                py < ground &&
+                py + ps > ground - o.h;
+        }
+
+        if (hit) {
+            gameOver();
+            return;
+        }
+
+        if (o.x + o.w < -20) {
+            obstacles.splice(i, 1);
+        }
+    }
+
+    // Partikel
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 0.12 * dt;
+        p.life -= dt;
+
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
+function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+
+    g.addColorStop(0, "#17113e");
+    g.addColorStop(1, "#070716");
+
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // Neon-Raster
+    const grid = 45;
+    const offset = (frame * speed * 0.35) % grid;
+
+    ctx.strokeStyle = "rgba(150, 70, 255, 0.15)";
+    ctx.lineWidth = 1;
+
+    for (let x = -offset; x < W; x += grid) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, ground);
+        ctx.stroke();
+    }
+
+    for (let y = 0; y < ground; y += grid) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+    }
+
+    // Sterne
+    for (let i = 0; i < 25; i++) {
+        const x = (
+            i * 137 - frame * speed * 0.12 + W * 10
+        ) % (W + 50);
+
+        const y = (i * 83) % Math.max(1, ground - 40);
+
+        ctx.fillStyle = "#b18cff";
+        ctx.globalAlpha = 0.3 + (i % 3) * 0.2;
+        ctx.fillRect(x, y, 3, 3);
+    }
+
+    ctx.globalAlpha = 1;
+
+    // Boden
+    ctx.fillStyle = "#171438";
+    ctx.fillRect(0, ground, W, H - ground);
+
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = "#b000ff";
+    ctx.fillStyle = "#dd55ff";
+    ctx.fillRect(0, ground, W, 3);
+    ctx.shadowBlur = 0;
+
+    const off = (frame * speed) % 40;
+
+    ctx.strokeStyle = "#9c4dff44";
+
+    for (let x = -off; x < W; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, ground + 3);
+        ctx.lineTo(x - 20, H);
+        ctx.stroke();
+    }
+}
+
+function drawPlayer() {
+    const s = player.size;
+
+    ctx.save();
+
+    ctx.translate(
+        player.x + s / 2,
+        player.y + s / 2
+    );
+
+    ctx.rotate(player.rotation);
+
+    ctx.shadowBlur = 22;
+    ctx.shadowColor = "#00ffff";
+
+    const g = ctx.createLinearGradient(
+        -s / 2, -s / 2, s / 2, s / 2
+    );
+
+    g.addColorStop(0, "#ffffff");
+    g.addColorStop(0.4, "#00ffff");
+    g.addColorStop(1, "#0077ff");
+
+    ctx.fillStyle = g;
+    ctx.fillRect(-s / 2, -s / 2, s, s);
+
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-s / 2, -s / 2, s, s);
+
+    ctx.fillStyle = "#07132c";
+    ctx.fillRect(-9, -5, 5, 8);
+    ctx.fillRect(4, -5, 5, 8);
+
+    ctx.restore();
+}
+
+function drawObstacles() {
+    for (const o of obstacles) {
+        ctx.save();
+
+        if (o.type === "spikes") {
+            const sw = o.w / o.count;
+
+            ctx.shadowBlur = 14;
+            ctx.shadowColor = "#ff2255";
+
+            for (let j = 0; j < o.count; j++) {
+                const x = o.x + j * sw;
+
+                ctx.beginPath();
+                ctx.moveTo(x, ground);
+                ctx.lineTo(x + sw / 2, ground - o.h);
+                ctx.lineTo(x + sw, ground);
+                ctx.closePath();
+
+                const g = ctx.createLinearGradient(
+                    x, ground - o.h, x, ground
+                );
+
+                g.addColorStop(0, "#ffffff");
+                g.addColorStop(0.25, "#ff66cc");
+                g.addColorStop(1, "#ff1744");
+
+                ctx.fillStyle = g;
+                ctx.fill();
+
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+        } else if (o.type === "floating") {
+            const by = o.y + Math.sin(o.phase) * 12;
+
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = "#bb44ff";
+
+            ctx.fillStyle = "#902cff";
+            ctx.fillRect(o.x, by, o.w, o.h);
+
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(o.x, by, o.w, o.h);
+
+            ctx.fillStyle = "#e9b4ff";
+            ctx.fillRect(o.x + 7, by + 7, o.w - 14, 5);
+
+            ctx.fillStyle = "#4a0d83";
+            ctx.fillRect(o.x + 10, by + 21, 5, 8);
+            ctx.fillRect(o.x + 27, by + 21, 5, 8);
+
+        } else if (o.type === "saw") {
+            const cx = o.x + o.w / 2;
+            const cy = o.y + o.h / 2;
+
+            ctx.translate(cx, cy);
+            ctx.rotate(o.angle);
+
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = "#ff8800";
+
+            // Sägezähne
+            ctx.beginPath();
+
+            for (let i = 0; i < 24; i++) {
+                const a = i * Math.PI * 2 / 24;
+                const r = i % 2 === 0 ? 24 : 18;
+
+                const x = Math.cos(a) * r;
+                const y = Math.sin(a) * r;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+
+            ctx.closePath();
+            ctx.fillStyle = "#ff5533";
+            ctx.fill();
+
+            ctx.strokeStyle = "#fff0bb";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 9, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffe477";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#421a2b";
+            ctx.fill();
+
+        } else if (o.type === "laser") {
+            const pulse = 0.65 + Math.sin(o.phase) * 0.3;
+
+            ctx.shadowBlur = 22;
+            ctx.shadowColor = "#ff003c";
+
+            ctx.globalAlpha = pulse;
+            ctx.fillStyle = "#ff003c";
+            ctx.fillRect(o.x, ground - o.h, o.w, o.h);
+
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(
+                o.x + 7,
+                ground - o.h,
+                5,
+                o.h
+            );
+
+            ctx.globalAlpha = 1;
+
+            // Laser-Basis
+            ctx.fillStyle = "#ff66aa";
+            ctx.fillRect(o.x - 5, ground - 5, o.w + 10, 8);
+        }
+
+        ctx.restore();
+    }
+}
+
+function drawParticles() {
+    for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, p.life / 35);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 5, 5);
+    }
+
+    ctx.globalAlpha = 1;
+}
+
+function draw() {
+    drawBackground();
+    drawObstacles();
+    drawParticles();
+
+    if (!dead || running) {
+        drawPlayer();
+    }
+
+    if (running) {
+        ctx.fillStyle = "#ffffff22";
+        ctx.fillRect(20, H - 20, W - 40, 5);
+
+        ctx.fillStyle = "#00ffff";
+        ctx.fillRect(
+            20,
+            H - 20,
+            (W - 40) * ((score % 500) / 500),
+            5
+        );
+    }
+}
+
+function loop(now) {
+    const dt = lastTime
+        ? Math.min((now - lastTime) / 16.667, 2)
+        : 1;
+
+    lastTime = now;
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(loop);
+}
+
+// PC-Steuerung
+window.addEventListener("keydown", e => {
+    if (
+        e.code === "Space" ||
+        e.code === "ArrowUp" ||
+        e.code === "KeyW"
+    ) {
+        e.preventDefault();
+
+        if (!running) {
+            startGame();
+        } else if (!e.repeat) {
+            jump();
+        }
+    }
+});
+
+// Maus und Touchscreen
+canvas.addEventListener("pointerdown", () => {
+    if (!running) {
+        startGame();
+    } else {
+        jump();
+    }
+});
+
+startButton.addEventListener("click", startGame);
+
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
