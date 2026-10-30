@@ -1,0 +1,2221 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tetra Fight  VS</title>
+
+<style>
+:root {
+    --bg: #0b0d14;
+    --panel: #151925;
+    --panel2: #1c2231;
+    --border: #30394d;
+    --text: #edf2ff;
+    --muted: #8994ac;
+    --p1: #46d9ff;
+    --p2: #ff638e;
+    --green: #63f5b1;
+    --yellow: #ffd166;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+        radial-gradient(ellipse at top, #202a42 0%, transparent 55%),
+        var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button, input, select { font: inherit; }
+
+button {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    color: var(--text);
+    background: var(--panel2);
+    padding: 11px 18px;
+    border-radius: 9px;
+    font-weight: 700;
+    transition: .15s;
+}
+
+button:hover {
+    border-color: var(--p1);
+    filter: brightness(1.15);
+}
+
+button:active { transform: scale(.98); }
+
+.hidden { display: none !important; }
+
+/* Main menu */
+
+#menu {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.menu-card {
+    width: min(650px, 100%);
+    background: rgba(21, 25, 37, .97);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 30px;
+    box-shadow: 0 25px 100px #0008;
+}
+
+.logo {
+    font-size: clamp(36px, 8vw, 60px);
+    font-weight: 950;
+    letter-spacing: -3px;
+    line-height: 1;
+    text-align: center;
+    margin: 8px 0;
+}
+
+.logo span { color: var(--p1); }
+
+.subtitle {
+    text-align: center;
+    color: var(--muted);
+    margin: 12px 0 28px;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.setting {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.setting label {
+    font-size: 13px;
+    font-weight: 800;
+    color: #cbd5eb;
+}
+
+.setting input, .setting select {
+    width: 100%;
+    background: #0d111b;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px;
+    color: var(--text);
+    outline: none;
+}
+
+.setting input:focus, .setting select:focus {
+    border-color: var(--p1);
+}
+
+.setting small {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.menu-section {
+    margin-top: 25px;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+}
+
+.menu-section h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+}
+
+.controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.controls-grid strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.controls-grid p {
+    margin: 5px 0;
+    color: #b8c2d8;
+    font-size: 12px;
+}
+
+kbd {
+    display: inline-block;
+    min-width: 24px;
+    text-align: center;
+    padding: 2px 5px;
+    border: 1px solid #414b61;
+    border-radius: 4px;
+    background: #242b3a;
+    color: white;
+    font-size: 11px;
+}
+
+.start-button {
+    display: block;
+    width: 100%;
+    margin-top: 26px;
+    padding: 16px;
+    background: var(--p1);
+    color: #06121b;
+    border: none;
+    font-size: 16px;
+    letter-spacing: 1px;
+}
+
+.menu-footnote {
+    color: var(--muted);
+    text-align: center;
+    font-size: 11px;
+    margin: 15px 0 0;
+}
+
+/* Game */
+
+#game {
+    min-height: 100vh;
+    padding: 16px;
+}
+
+.topbar {
+    max-width: 1400px;
+    margin: 0 auto 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.topbar h1 {
+    font-size: 23px;
+    margin: 0;
+    letter-spacing: -1px;
+}
+
+.topbar h1 span { color: var(--p1); }
+
+.topbar-info {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.topbar-info button {
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.match-score {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    max-width: 650px;
+    margin: 0 auto 20px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--panel);
+}
+
+.player-score {
+    flex: 1;
+    text-align: center;
+}
+
+.player-score .name {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.player-score .score {
+    font-size: 35px;
+    font-weight: 950;
+    line-height: 1.1;
+}
+
+.p1-color { color: var(--p1); }
+.p2-color { color: var(--p2); }
+
+.versus {
+    font-weight: 950;
+    color: #68758d;
+    font-size: 15px;
+}
+
+.round-info {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+}
+
+.boards {
+    max-width: 1400px;
+    margin: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.player-panel {
+    min-width: 0;
+    padding: 13px;
+    background: rgba(21, 25, 37, .95);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+}
+
+.player-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.player-heading h2 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.player-heading .status {
+    font-size: 10px;
+    color: var(--muted);
+    text-align: right;
+}
+
+.game-layout {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 7px;
+}
+
+.board-wrap {
+    position: relative;
+    width: 300px;
+    max-width: calc(100% - 120px);
+    flex: 0 1 300px;
+    background: #080b12;
+    border: 1px solid #364158;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.board-wrap canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.side-info {
+    flex: 0 0 88px;
+    width: 88px;
+    min-width: 0;
+}
+
+.garbage-track {
+    flex: 0 0 12px;
+    width: 12px;
+    align-self: stretch;
+    min-height: 100%;
+    background: #0e121d;
+    border: 1px solid #414b61;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+}
+
+.garbage-meter {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-start;
+    gap: 1px;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+}
+
+.garbage-meter span {
+    display: block;
+    flex: 0 0 5%;
+    width: 100%;
+    background: var(--p2);
+    box-shadow: inset 0 0 0 1px #ff9bb555;
+}
+
+.combo-badge {
+    color: var(--yellow);
+    font-size: 10px;
+    font-weight: 900;
+    white-space: nowrap;
+    letter-spacing: .4px;
+    padding: 4px 6px;
+    border: 1px solid #ffd16655;
+    border-radius: 6px;
+    background: #ffd16612;
+}
+
+.info-box {
+    background: #0e121d;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 7px;
+    margin-bottom: 9px;
+}
+
+.info-box h3 {
+    margin: 0 0 7px;
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.hold-canvas {
+    display: block;
+    width: 100%;
+    height: 57px;
+}
+
+.next-canvas {
+    display: block;
+    width: 100%;
+    height: 220px;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    margin-top: 12px;
+}
+
+.stat {
+    background: #0e121d;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px;
+    min-width: 0;
+}
+
+.stat-label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+.stat-value {
+    font-size: 17px;
+    font-weight: 900;
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+}
+
+.garbage-label {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 8px;
+}
+
+.countdown {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #05070ccc;
+    pointer-events: none;
+}
+
+.countdown span {
+    color: var(--p1);
+    font-size: clamp(76px, 18vw, 150px);
+    line-height: 1;
+    font-weight: 1000;
+    text-shadow: 0 0 35px #46d9ff66;
+    animation: countdown-pop .35s ease-out;
+}
+
+@keyframes countdown-pop {
+    from { transform: scale(1.35); opacity: .25; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.bottom-hint {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    margin: 18px auto;
+}
+
+#overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 7, 12, .84);
+    padding: 20px;
+}
+
+.overlay-card {
+    width: min(420px, 100%);
+    text-align: center;
+    padding: 30px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 20px 100px #0009;
+}
+
+.overlay-card h2 {
+    font-size: 30px;
+    margin: 0 0 12px;
+}
+
+.overlay-card p {
+    color: #b8c2d8;
+    line-height: 1.6;
+}
+
+.overlay-card button {
+    width: 100%;
+    margin-top: 10px;
+}
+
+.overlay-card .primary {
+    background: var(--p1);
+    color: #06121b;
+    border: none;
+}
+
+@media (max-width: 900px) {
+    .boards {
+        grid-template-columns: 1fr;
+        max-width: 510px;
+    }
+
+    .player-panel { padding: 10px; }
+}
+
+@media (max-width: 420px) {
+    #game { padding: 7px; }
+    .game-layout { gap: 6px; }
+    .side-info { flex-basis: 68px; width: 68px; }
+    .board-wrap { max-width: calc(100% - 98px); }
+    .game-layout { gap: 4px; }
+    .garbage-track { flex-basis: 9px; width: 9px; }
+    .player-panel { padding: 7px; }
+    .next-canvas { height: 190px; }
+    .settings-grid { grid-template-columns: 1fr; }
+    .menu-card { padding: 20px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ==================== MENU ==================== -->
+
+<section id="menu">
+    <div class="menu-card">
+        <div class="logo"><span>Tetra Fight </span> VS</div>
+        <div class="subtitle">Two players. One keyboard. No mercy.</div>
+
+        <div class="settings-grid">
+            <div class="setting">
+                <label for="gravity">Grundfallgeschwindigkeit</label>
+                <select id="gravity">
+                    <option value="1000">Langsam</option>
+                    <option value="700">Normal</option>
+                    <option value="450" selected>Schnell</option>
+                    <option value="250">Sehr schnell</option>
+                    <option value="120">Extrem</option>
+                </select>
+                <small>Millisekunden pro Fall-Schritt</small>
+            </div>
+
+            <div class="setting">
+                <label for="softDrop">Soft-Drop-Multiplikator</label>
+                <select id="softDrop">
+                    <option value="5">5×</option>
+                    <option value="10" selected>10×</option>
+                    <option value="20">20×</option>
+                    <option value="40">40×</option>
+                </select>
+                <small>Zusätzliche Fallgeschwindigkeit</small>
+            </div>
+
+            <div class="setting">
+                <label for="das">DAS: Verzögerung (ms)</label>
+                <input id="das" type="number" min="50" max="500" step="10" value="150">
+                <small>Wartezeit vor automatischer Wiederholung</small>
+            </div>
+
+            <div class="setting">
+                <label for="arr">ARR: Wiederholung (ms)</label>
+                <input id="arr" type="number" min="0" max="200" step="5" value="35">
+                <small>Abstand zwischen Bewegungen. 0 = bis zur Wand</small>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <h3>Steuerung</h3>
+            <div class="controls-grid">
+                <div>
+                    <strong class="p1-color">Spieler 1</strong>
+                    <p><kbd>A</kbd> / <kbd>D</kbd> Bewegen</p>
+                    <p><kbd>S</kbd> Soft Drop</p>
+                    <p><kbd>W</kbd> Hard Drop</p>
+                    <p><kbd>Q</kbd> / <kbd>E</kbd> Drehen</p>
+                    <p><kbd>⇧ links</kbd> Hold</p>
+                </div>
+                <div>
+                    <strong class="p2-color">Spieler 2</strong>
+                    <p><kbd>←</kbd> / <kbd>→</kbd> Bewegen</p>
+                    <p><kbd>↓</kbd> Soft Drop</p>
+                    <p><kbd>↑</kbd> Hard Drop</p>
+                    <p><kbd>-</kbd> / <kbd>.</kbd> Drehen</p>
+                    <p><kbd>⇧ rechts</kbd> Hold</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <h3>Spielregeln</h3>
+            <p style="color:#b8c2d8;font-size:12px;line-height:1.7;margin-bottom:0">
+                Bag-of-7 · SRS mit Wall Kicks · Ghost-Piece · Hold ·
+                5er-Vorschau · Garbage-Angriffe · Combo-Bonus ·
+                Back-to-Back-Quad · Matchende bei mehr als 2 Runden Vorsprung.
+            </p>
+        </div>
+
+        <button class="start-button" id="startButton">MATCH STARTEN</button>
+        <p class="menu-footnote">Ein Browser. Eine Tastatur. Zwei Spieler.</p>
+    </div>
+</section>
+
+<!-- ==================== GAME ==================== -->
+
+<section id="game" class="hidden">
+    <header class="topbar">
+        <h1><span>Tetra Fight </span> VS</h1>
+        <div class="topbar-info">
+            <span>SRS · BAG-7 · VERSUS</span>
+            <button id="menuButton">Hauptmenü</button>
+        </div>
+    </header>
+
+    <div class="match-score">
+        <div class="player-score">
+            <div class="name p1-color">PLAYER 1</div>
+            <div class="score p1-color" id="score1">0</div>
+            <div class="round-info" id="roundStat1">0 Runden</div>
+        </div>
+
+        <div class="versus">VS</div>
+
+        <div class="player-score">
+            <div class="name p2-color">PLAYER 2</div>
+            <div class="score p2-color" id="score2">0</div>
+            <div class="round-info" id="roundStat2">0 Runden</div>
+        </div>
+    </div>
+
+    <div class="boards">
+        <!-- PLAYER 1 -->
+
+        <section class="player-panel">
+            <div class="player-heading">
+                <h2 class="p1-color">PLAYER 1</h2>
+                <span class="combo-badge" id="comboBadge1">COMBO ×0</span>
+                <span class="status" id="status1">BEREIT</span>
+            </div>
+
+            <div class="game-layout">
+                <div class="board-wrap">
+                    <canvas id="board1" width="300" height="600"></canvas>
+                </div>
+                <div class="garbage-track" aria-label="Angekündigte Garbage-Lines">
+                    <div class="garbage-meter" id="garbageMeter1"></div>
+                </div>
+
+                <aside class="side-info">
+                    <div class="info-box">
+                        <h3>Hold</h3>
+                        <canvas id="hold1" class="hold-canvas" width="110" height="65"></canvas>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Next 5</h3>
+                        <canvas id="next1" class="next-canvas" width="110" height="250"></canvas>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="points1">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Lines</div>
+                    <div class="stat-value" id="lines1">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Combo</div>
+                    <div class="stat-value" id="combo1">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">B2B</div>
+                    <div class="stat-value" id="b2b1">OFF</div>
+                </div>
+            </div>
+
+            <div class="garbage-label">
+                Garbage angekündigt: <b id="garbageCount1">0</b> Linien
+            </div>
+        </section>
+
+        <!-- PLAYER 2 -->
+
+        <section class="player-panel">
+            <div class="player-heading">
+                <h2 class="p2-color">PLAYER 2</h2>
+                <span class="combo-badge" id="comboBadge2">COMBO ×0</span>
+                <span class="status" id="status2">BEREIT</span>
+            </div>
+
+            <div class="game-layout">
+                <div class="board-wrap">
+                    <canvas id="board2" width="300" height="600"></canvas>
+                </div>
+                <div class="garbage-track" aria-label="Angekündigte Garbage-Lines">
+                    <div class="garbage-meter" id="garbageMeter2"></div>
+                </div>
+
+                <aside class="side-info">
+                    <div class="info-box">
+                        <h3>Hold</h3>
+                        <canvas id="hold2" class="hold-canvas" width="110" height="65"></canvas>
+                    </div>
+
+                    <div class="info-box">
+                        <h3>Next 5</h3>
+                        <canvas id="next2" class="next-canvas" width="110" height="250"></canvas>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-label">Score</div>
+                    <div class="stat-value" id="points2">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Lines</div>
+                    <div class="stat-value" id="lines2">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Combo</div>
+                    <div class="stat-value" id="combo2">0</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">B2B</div>
+                    <div class="stat-value" id="b2b2">OFF</div>
+                </div>
+            </div>
+
+            <div class="garbage-label">
+                Garbage angekündigt: <b id="garbageCount2">0</b> Linien
+            </div>
+        </section>
+    </div>
+
+    <div class="bottom-hint">
+        Kein Pause-Menü. Kein künstlicher Schnickschnack. Spielt einfach.
+    </div>
+</section>
+
+<div id="overlay" class="hidden">
+    <div class="overlay-card">
+        <h2 id="overlayTitle">Runde beendet</h2>
+        <p id="overlayText"></p>
+        <button class="primary" id="overlayButton">Nächste Runde</button>
+        <button id="overlayMenuButton">Hauptmenü</button>
+    </div>
+</div>
+
+<div id="countdown" class="countdown hidden" aria-live="assertive">
+    <span id="countdownText">3</span>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   KONSTANTEN
+============================================================ */
+
+const COLS = 10;
+const ROWS = 22;          // 2 verdeckte Spawn-Reihen
+const HIDDEN_ROWS = 2;
+const CELL = 30;
+
+const COLORS = {
+    I: "#43dcf7",
+    O: "#ffd166",
+    T: "#bd85ff",
+    S: "#63f5a3",
+    Z: "#ff647d",
+    J: "#6b8cff",
+    L: "#ffad62"
+};
+
+const PIECES = {
+    I: [
+        [0,0,0,0],
+        [1,1,1,1],
+        [0,0,0,0],
+        [0,0,0,0]
+    ],
+    O: [
+        [1,1],
+        [1,1]
+    ],
+    T: [
+        [0,1,0],
+        [1,1,1],
+        [0,0,0]
+    ],
+    S: [
+        [0,1,1],
+        [1,1,0],
+        [0,0,0]
+    ],
+    Z: [
+        [1,1,0],
+        [0,1,1],
+        [0,0,0]
+    ],
+    J: [
+        [1,0,0],
+        [1,1,1],
+        [0,0,0]
+    ],
+    L: [
+        [0,0,1],
+        [1,1,1],
+        [0,0,0]
+    ]
+};
+
+const JLSTZ_KICKS = {
+    "0>1": [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    "1>0": [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    "1>2": [[0,0],[1,0],[1,-1],[0,2],[1,2]],
+    "2>1": [[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+    "2>3": [[0,0],[1,0],[1,1],[0,-2],[1,-2]],
+    "3>2": [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    "3>0": [[0,0],[-1,0],[-1,-1],[0,2],[-1,2]],
+    "0>3": [[0,0],[1,0],[1,1],[0,-2],[1,-2]]
+};
+
+const I_KICKS = {
+    "0>1": [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+    "1>0": [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+    "1>2": [[0,0],[-1,0],[2,0],[-1,2],[2,-1]],
+    "2>1": [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+    "2>3": [[0,0],[2,0],[-1,0],[2,1],[-1,-2]],
+    "3>2": [[0,0],[-2,0],[1,0],[-2,-1],[1,2]],
+    "3>0": [[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+    "0>3": [[0,0],[-1,0],[2,0],[-1,2],[2,-1]]
+};
+
+/*
+ * Kick-Tabellen werden in der üblichen SRS-Konvention angegeben,
+ * in der Y nach oben positiv ist. Das Spielfeld nutzt Y nach unten.
+ * Daher wird die Y-Komponente bei der Anwendung invertiert.
+ */
+
+
+const CONTROL = {
+    1: {
+        left: "KeyA",
+        right: "KeyD",
+        soft: "KeyS",
+        hard: "KeyE",
+        ccw: "KeyQ",
+        cw: "KeyW",
+        hold: "ShiftLeft"
+    },
+    2: {
+        left: "ArrowLeft",
+        right: "ArrowRight",
+        soft: "ArrowDown",
+        hard: "Comma",
+        ccw: "Period",
+        cw: "ArrowUp",
+        hold: "ShiftRight"
+    }
+};
+
+/* ============================================================
+   HILFSFUNKTIONEN
+============================================================ */
+
+function emptyBoard() {
+    return Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+}
+
+function cloneMatrix(matrix) {
+    return matrix.map(row => row.slice());
+}
+
+function rotateMatrix(matrix, direction) {
+    const n = matrix.length;
+    const result = Array.from({ length: n }, () => Array(n).fill(0));
+
+    for (let y = 0; y < n; y++) {
+        for (let x = 0; x < n; x++) {
+            if (direction === 1) {
+                result[x][n - 1 - y] = matrix[y][x];
+            } else {
+                result[n - 1 - x][y] = matrix[y][x];
+            }
+        }
+    }
+
+    return result;
+}
+
+function createBag() {
+    const bag = ["I", "O", "T", "S", "Z", "J", "L"];
+
+    for (let i = bag.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+
+    return bag;
+}
+
+function newPlayer(id) {
+    return {
+        id,
+        board: emptyBoard(),
+        bag: [],
+        queue: [],
+        active: null,
+        hold: null,
+        canHold: true,
+
+        score: 0,
+        totalLines: 0,
+        combo: 0,
+        backToBack: false,
+
+        // Jede Linie speichert Lückenposition und frühesten Zustellzeitpunkt.
+        // Linien einer Angriffswelle teilen dieselbe Lücke.
+        pendingGarbage: [],
+
+        lastFall: performance.now(),
+        lockTime: null,
+        lockResets: 0,
+
+        gameOver: false,
+        alive: true,
+        lastClear: "",
+        lastAttack: 0,
+        flashUntil: 0,
+
+        canvas: document.getElementById("board" + id),
+        ctx: document.getElementById("board" + id).getContext("2d"),
+
+        holdCanvas: document.getElementById("hold" + id),
+        nextCanvas: document.getElementById("next" + id)
+    };
+}
+
+let players = [];
+let roundScores = [0, 0];
+let roundNumber = 1;
+
+let gameRunning = false;
+let matchOver = false;
+let roundTransition = false;
+let animationFrame = 0;
+let transitionTimer = null;
+let countdownTimer = null;
+let countdownToken = 0;
+const GARBAGE_DELAY_MS = 1200;
+
+let gravityMs = 450;
+let softMultiplier = 10;
+let dasMs = 150;
+let arrMs = 35;
+
+let heldKeys = new Map();
+let lastFrame = performance.now();
+
+/* ============================================================
+   BAG-OF-7 UND TETROMINO-SPAWN
+============================================================ */
+
+function fillQueue(player, minimum = 7) {
+    // Gemeinsame Sequenz für beide Spieler.
+    if (!Array.isArray(fillQueue.sequence)) {
+        fillQueue.sequence = [];
+    }
+
+    while (player.queue.length < minimum) {
+        // Index des nächsten benötigten Steins.
+        const index = player.sequenceIndex + player.queue.length;
+
+        // Bei Bedarf weitere 7er-Bags an die Sequenz anhängen.
+        while (fillQueue.sequence.length <= index) {
+            fillQueue.sequence.push(...createBag());
+        }
+
+        player.queue.push(fillQueue.sequence[index]);
+    }
+}
+function spawnPiece(player, type = null) {
+    fillQueue(player, 7);
+
+    let pieceType;
+
+    if (type) {
+        // Ein getauschter Hold-Stein verbraucht keinen Sequenzplatz.
+        pieceType = type;
+    } else {
+        // Normaler Spawn: Nächsten Stein aus der Queue nehmen.
+        pieceType = player.queue.shift();
+        player.sequenceIndex++;
+    }
+
+    const matrix = cloneMatrix(PIECES[pieceType]);
+
+    const x = Math.floor((COLS - matrix.length) / 2);
+    const y = pieceType === "I" ? -1 : 0;
+
+    player.active = {
+        type: pieceType,
+        matrix,
+        x,
+        y,
+        rotation: 0
+    };
+
+    player.canHold = true;
+    player.lastFall = performance.now();
+    player.lockTime = null;
+    player.lockResets = 0;
+
+    if (collides(player, player.active)) {
+        player.gameOver = true;
+        player.alive = false;
+        player.active = null;
+        handleTopOut(player);
+        return;
+    }
+
+    player.lastClear = "";
+    player.lastAttack = 0;
+}
+
+function startPlayerRound(player) {
+    // Zu Beginn einer neuen Runde eine frische Sequenz erzeugen.
+    if (player.id === 1) {
+        fillQueue.sequence = [];
+    }
+
+    // Jeder Spieler liest ab dem ersten Stein.
+    player.sequenceIndex = 0;
+
+    player.board = emptyBoard();
+    player.bag = [];
+    player.queue = [];
+    player.active = null;
+    player.hold = null;
+    player.canHold = true;
+
+    player.score = 0;
+    player.totalLines = 0;
+    player.combo = 0;
+    player.backToBack = false;
+    player.pendingGarbage = [];
+
+    player.gameOver = false;
+    player.alive = true;
+    player.lockTime = null;
+    player.lockResets = 0;
+    player.lastClear = "";
+    player.lastAttack = 0;
+    player.flashUntil = 0;
+
+    fillQueue(player, 7);
+    spawnPiece(player);
+}
+
+/* ============================================================
+   KOLLISION UND BEWEGUNG
+============================================================ */
+
+function collides(player, piece, dx = 0, dy = 0, matrix = piece.matrix) {
+    for (let y = 0; y < matrix.length; y++) {
+        for (let x = 0; x < matrix[y].length; x++) {
+            if (!matrix[y][x]) continue;
+
+            const bx = piece.x + x + dx;
+            const by = piece.y + y + dy;
+
+            if (bx < 0 || bx >= COLS || by >= ROWS) {
+                return true;
+            }
+
+            if (by >= 0 && player.board[by][bx]) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function resetLockDelay(player) {
+    if (!player.active) return;
+
+    if (player.lockTime !== null && player.lockResets < 15) {
+        player.lockTime = performance.now();
+        player.lockResets++;
+    }
+}
+
+function movePiece(player, dx, dy = 0) {
+    if (!player.active || player.gameOver || !gameRunning) return false;
+
+    if (collides(player, player.active, dx, dy)) {
+        return false;
+    }
+
+    player.active.x += dx;
+    player.active.y += dy;
+
+    if (dy !== 0) {
+        player.lastFall = performance.now();
+    }
+
+    resetLockDelay(player);
+
+    if (collides(player, player.active, 0, 1)) {
+        if (player.lockTime === null) {
+            player.lockTime = performance.now();
+        }
+    } else {
+        player.lockTime = null;
+    }
+
+    return true;
+}
+
+/* ============================================================
+   SRS ROTATION MIT WALL KICKS
+============================================================ */
+
+function rotatePiece(player, direction) {
+    if (!gameRunning || !player.active || player.gameOver) return;
+
+    const piece = player.active;
+
+    if (piece.type === "O") return;
+
+    const oldRotation = piece.rotation;
+    const newRotation = (oldRotation + direction + 4) % 4;
+
+    const rotated = rotateMatrix(piece.matrix, direction);
+
+    const key = oldRotation + ">" + newRotation;
+
+    const table = piece.type === "I" ? I_KICKS : JLSTZ_KICKS;
+    const tests = table[key] || [[0, 0]];
+
+    for (const [kx, ky] of tests) {
+        const testPiece = {
+            ...piece,
+            x: piece.x + kx,
+            y: piece.y - ky,
+            matrix: rotated,
+            rotation: newRotation
+        };
+
+        if (!collides(player, testPiece)) {
+            piece.x = testPiece.x;
+            piece.y = testPiece.y;
+            piece.matrix = rotated;
+            piece.rotation = newRotation;
+
+            resetLockDelay(player);
+
+            if (collides(player, piece, 0, 1)) {
+                if (player.lockTime === null) {
+                    player.lockTime = performance.now();
+                }
+            } else {
+                player.lockTime = null;
+            }
+
+            return;
+        }
+    }
+}
+
+/* ============================================================
+   HOLD
+============================================================ */
+
+function holdPiece(player) {
+    if (!gameRunning || !player.active || !player.canHold) return;
+
+    const currentType = player.active.type;
+    player.canHold = false;
+
+    if (player.hold === null) {
+        player.hold = currentType;
+        player.active = null;
+        spawnPiece(player);
+    } else {
+        const heldType = player.hold;
+        player.hold = currentType;
+        player.active = null;
+        spawnPiece(player, heldType);
+    }
+
+    player.canHold = false;
+}
+
+/* ============================================================
+   HARD DROP UND LOCK
+============================================================ */
+
+function hardDrop(player) {
+    if (!gameRunning || !player.active || player.gameOver) return;
+
+    let distance = 0;
+
+    while (!collides(player, player.active, 0, 1)) {
+        player.active.y++;
+        distance++;
+    }
+
+    player.score += distance * 2;
+
+    lockPiece(player);
+}
+
+function lockPiece(player) {
+    if (!player.active || player.gameOver) return;
+
+    const piece = player.active;
+
+    for (let y = 0; y < piece.matrix.length; y++) {
+        for (let x = 0; x < piece.matrix[y].length; x++) {
+            if (!piece.matrix[y][x]) continue;
+
+            const bx = piece.x + x;
+            const by = piece.y + y;
+
+            if (by < 0) {
+                player.gameOver = true;
+                player.alive = false;
+                player.active = null;
+                handleTopOut(player);
+                return;
+            }
+
+            if (by < ROWS && bx >= 0 && bx < COLS) {
+                player.board[by][bx] = piece.type;
+            }
+        }
+    }
+
+    player.active = null;
+
+    const cleared = clearLines(player);
+
+    if (cleared > 0) {
+        processLineClear(player, cleared);
+    } else {
+        player.combo = 0;
+    }
+
+    /*
+     * Angriffe werden zuerst mit bereits eingehender Garbage
+     * verrechnet. Die verbleibende eingehende Garbage wird danach
+     * beim eigenen Lock eingefügt.
+     */
+
+    applyPendingGarbage(player);
+
+    if (!player.gameOver && player.alive) {
+        spawnPiece(player);
+    }
+}
+
+/* ============================================================
+   LINE CLEAR
+============================================================ */
+
+function clearLines(player) {
+    let cleared = 0;
+
+    for (let y = ROWS - 1; y >= 0; y--) {
+        if (player.board[y].every(cell => cell !== null)) {
+            player.board.splice(y, 1);
+            player.board.unshift(Array(COLS).fill(null));
+            cleared++;
+            y++;
+        }
+    }
+
+    return cleared;
+}
+
+function processLineClear(player, lines) {
+    player.totalLines += lines;
+
+    const baseScore = [0, 100, 300, 500, 800];
+    player.score += (baseScore[lines] || lines * 200);
+
+    player.combo++;
+
+    const isQuad = lines === 4;
+    const wasB2B = player.backToBack;
+
+    let attack = 0;
+
+    if (lines === 2) attack = 1;
+    if (lines === 3) attack = 2;
+
+    if (isQuad) {
+        attack = wasB2B ? 6 : 4;
+        player.backToBack = true;
+    } else {
+        player.backToBack = false;
+    }
+
+    /*
+     * Combo 1 und 2 geben keinen Bonus.
+     * Combo 3 = 1 Linie, Combo 4 = 2 Linien usw.
+     * Ab Combo 10 bleibt der Bonus bei 8 Linien.
+     */
+
+    const comboBonus = Math.min(8, Math.max(0, player.combo - 2));
+    attack += comboBonus;
+
+    player.score += lines * 50 * player.combo;
+
+    player.lastClear = lines === 4 ? "QUAD" :
+                       lines === 3 ? "TRIPLE" :
+                       lines === 2 ? "DOUBLE" : "SINGLE";
+
+    player.lastAttack = attack;
+    player.flashUntil = performance.now() + 600;
+
+    if (attack > 0) {
+        sendGarbage(player, attack);
+    }
+}
+
+/* ============================================================
+   GARBAGE SYSTEM
+============================================================ */
+
+/*
+ * Eine Angriffswelle erhält eine zufällige Lückenposition.
+ * Sämtliche Linien dieser Welle verwenden genau diese Position.
+ *
+ * Wenn der Angriff durch bereits eingehende Garbage teilweise
+ * gecancelt wird, werden nur die verbleibenden Linien weitergesendet.
+ */
+
+function sendGarbage(attacker, amount) {
+    if (amount <= 0 || !gameRunning) return;
+
+    const defender = players.find(p => p.id !== attacker.id);
+    if (!defender || defender.gameOver) return;
+
+    let remaining = amount;
+
+    // Zuerst die eigene eingehende Garbage neutralisieren.
+    const cancel = Math.min(remaining, attacker.pendingGarbage.length);
+
+    if (cancel > 0) {
+        attacker.pendingGarbage.splice(0, cancel);
+        remaining -= cancel;
+    }
+
+    if (remaining <= 0) return;
+
+    // Eine Lücke und ein Zustellzeitpunkt für die gesamte Angriffswelle.
+    // Die Linien werden sofort angekündigt, aber erst nach der Verzögerung zugestellt.
+    const hole = Math.floor(Math.random() * COLS);
+    const dueAt = performance.now() + GARBAGE_DELAY_MS;
+
+    for (let i = 0; i < remaining; i++) {
+        defender.pendingGarbage.push({ hole, dueAt });
+    }
+}
+
+function applyPendingGarbage(player) {
+    if (player.gameOver || !player.alive) return;
+
+    // Noch nicht fällige Garbage bleibt sichtbar im Meter und wartet.
+    const now = performance.now();
+
+    while (
+        player.pendingGarbage.length > 0 &&
+        player.pendingGarbage[0].dueAt <= now
+    ) {
+        const garbageLine = player.pendingGarbage.shift();
+        const hole = garbageLine.hole;
+        const removed = player.board.shift();
+
+        // Belegte Zellen, die über den oberen Rand geschoben werden,
+        // verursachen Top-out.
+        if (removed && removed.some(cell => cell !== null)) {
+            player.gameOver = true;
+            player.alive = false;
+            handleTopOut(player);
+            return;
+        }
+
+        const row = Array(COLS).fill("G");
+        row[hole] = null;
+        player.board.push(row);
+    }
+
+    if (player.active && collides(player, player.active)) {
+        player.gameOver = true;
+        player.alive = false;
+        player.active = null;
+        handleTopOut(player);
+    }
+}
+
+/* ============================================================
+   TOP-OUT UND MATCH
+============================================================ */
+
+function handleTopOut(player) {
+    if (!gameRunning || roundTransition || matchOver) return;
+
+    player.gameOver = true;
+    player.alive = false;
+    player.active = null;
+
+    const winner = players.find(p => p.id !== player.id);
+
+    if (!winner || winner.gameOver) {
+        finishRound(null);
+    } else {
+        finishRound(winner);
+    }
+}
+
+function finishRound(winner) {
+    if (roundTransition || matchOver) return;
+
+    roundTransition = true;
+    gameRunning = false;
+    heldKeys.clear();
+
+    if (transitionTimer) {
+        clearTimeout(transitionTimer);
+        transitionTimer = null;
+    }
+
+    if (winner) {
+        roundScores[winner.id - 1]++;
+    }
+
+    updateScoreboard();
+
+    const diff = Math.abs(roundScores[0] - roundScores[1]);
+
+    if (diff > 2) {
+        matchOver = true;
+
+        const matchWinner = roundScores[0] > roundScores[1] ? 1 : 2;
+
+        showOverlay(
+            "PLAYER " + matchWinner + " GEWINNT!",
+            "Endstand: " + roundScores[0] + " : " + roundScores[1] +
+            ". Mehr als zwei Runden Vorsprung. Match entschieden.",
+            "Neues Match starten",
+            () => {
+                clearTransitionTimer();
+                hideOverlay();
+                resetMatch();
+            }
+        );
+    } else {
+        let message;
+
+        if (!winner) {
+            message = "Beide Spieler sind ausgeschieden. Keine Runde vergeben.";
+        } else {
+            message = "Spieler " + winner.id + " gewinnt die Runde. " +
+                      "Stand: " + roundScores[0] + " : " + roundScores[1] +
+                      ". Die nächste Runde startet automatisch.";
+        }
+
+        showOverlay(
+            "RUNDE " + roundNumber + " BEENDET",
+            message,
+            "Jetzt nächste Runde",
+            () => {
+                clearTransitionTimer();
+                hideOverlay();
+                startNextRound();
+            }
+        );
+
+        // Auto-weiter nach kurzer Ergebnisanzeige. Der Button kann überspringen.
+        transitionTimer = setTimeout(() => {
+            transitionTimer = null;
+            if (!matchOver && roundTransition) {
+                hideOverlay();
+                startNextRound();
+            }
+        }, 2200);
+    }
+}
+
+function clearTransitionTimer() {
+    if (transitionTimer) {
+        clearTimeout(transitionTimer);
+        transitionTimer = null;
+    }
+}
+
+function updateScoreboard() {
+    document.getElementById("score1").textContent = roundScores[0];
+    document.getElementById("score2").textContent = roundScores[1];
+
+    document.getElementById("roundStat1").textContent =
+        roundScores[0] + (roundScores[0] === 1 ? " Runde" : " Runden");
+
+    document.getElementById("roundStat2").textContent =
+        roundScores[1] + (roundScores[1] === 1 ? " Runde" : " Runden");
+}
+
+function startNextRound(incrementRound = true) {
+    clearTransitionTimer();
+
+    if (incrementRound) roundNumber++;
+
+    roundTransition = true;
+    gameRunning = false;
+    heldKeys.clear();
+
+    for (const player of players) {
+        startPlayerRound(player);
+    }
+
+    updateScoreboard();
+    render();
+    beginCountdown(() => {
+        roundTransition = false;
+        gameRunning = true;
+        heldKeys.clear();
+        lastFrame = performance.now();
+        for (const player of players) {
+            player.lastFall = performance.now();
+        }
+    });
+}
+
+function resetMatch() {
+    roundScores = [0, 0];
+    roundNumber = 1;
+    matchOver = false;
+    roundTransition = true;
+    startNextRound(false);
+}
+
+function beginCountdown(onComplete) {
+    // Invalidiert jeden eventuell noch laufenden Countdown.
+    countdownToken++;
+    const token = countdownToken;
+
+    if (countdownTimer) {
+        clearTimeout(countdownTimer);
+        countdownTimer = null;
+    }
+
+    gameRunning = false;
+    heldKeys.clear();
+
+    const layer = document.getElementById("countdown");
+    const text = document.getElementById("countdownText");
+    layer.classList.remove("hidden");
+
+    let value = 3;
+    text.textContent = String(value);
+
+    const tick = () => {
+        if (token !== countdownToken) return;
+
+        if (value > 1) {
+            value--;
+            text.textContent = String(value);
+            countdownTimer = setTimeout(tick, 850);
+            return;
+        }
+
+        if (value === 1) {
+            text.textContent = "GO!";
+            value = 0;
+            countdownTimer = setTimeout(tick, 500);
+            return;
+        }
+
+        layer.classList.add("hidden");
+        countdownTimer = null;
+        if (typeof onComplete === "function") onComplete();
+    };
+
+    countdownTimer = setTimeout(tick, 850);
+}
+
+function showOverlay(title, text, buttonText, callback) {
+    document.getElementById("overlayTitle").textContent = title;
+    document.getElementById("overlayText").textContent = text;
+
+    const button = document.getElementById("overlayButton");
+    button.textContent = buttonText;
+    button.onclick = callback;
+
+    document.getElementById("overlay").classList.remove("hidden");
+}
+
+function hideOverlay() {
+    document.getElementById("overlay").classList.add("hidden");
+}
+
+/* ============================================================
+   GHOST PIECE
+============================================================ */
+
+function getGhostY(player) {
+    if (!player.active) return 0;
+
+    let y = player.active.y;
+
+    while (!collides(player, {
+        ...player.active,
+        y
+    }, 0, 1)) {
+        y++;
+    }
+
+    return y;
+}
+
+/* ============================================================
+   ZEICHNEN
+============================================================ */
+
+function drawCell(ctx, x, y, color, size = CELL, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    if (color === "G") {
+        ctx.fillStyle = "#d35c80";
+        ctx.fillRect(x * size, y * size, size, size);
+
+        ctx.strokeStyle = "#ff9bb5";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x * size + 2, y * size + 2, size - 4, size - 4);
+
+        ctx.restore();
+        return;
+    }
+
+    ctx.fillStyle = color;
+    ctx.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.globalAlpha = alpha * 0.16;
+    ctx.fillRect(x * size + 3, y * size + 3, size - 6, 3);
+
+    ctx.strokeStyle = "#000000";
+    ctx.globalAlpha = alpha * 0.2;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x * size + 1, y * size + 1, size - 2, size - 2);
+
+    ctx.restore();
+}
+
+function drawGhostCell(ctx, x, y, color) {
+    if (y < HIDDEN_ROWS) return;
+
+    const visibleY = y - HIDDEN_ROWS;
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.65;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(
+        x * CELL + 4,
+        visibleY * CELL + 4,
+        CELL - 8,
+        CELL - 8
+    );
+    ctx.restore();
+}
+
+function drawBoard(player) {
+    const ctx = player.ctx;
+
+    ctx.clearRect(0, 0, player.canvas.width, player.canvas.height);
+    ctx.fillStyle = "#080b12";
+    ctx.fillRect(0, 0, player.canvas.width, player.canvas.height);
+
+    // Raster
+    ctx.strokeStyle = "#ffffff0b";
+    ctx.lineWidth = 1;
+
+    for (let x = 0; x <= COLS; x++) {
+        ctx.beginPath();
+        ctx.moveTo(x * CELL, 0);
+        ctx.lineTo(x * CELL, 600);
+        ctx.stroke();
+    }
+
+    for (let y = 0; y <= 20; y++) {
+        ctx.beginPath();
+        ctx.moveTo(0, y * CELL);
+        ctx.lineTo(300, y * CELL);
+        ctx.stroke();
+    }
+
+    // Fixierte Blöcke
+    for (let y = HIDDEN_ROWS; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+            const cell = player.board[y][x];
+
+            if (cell) {
+                const color = cell === "G" ? "G" : COLORS[cell];
+                drawCell(ctx, x, y - HIDDEN_ROWS, color);
+            }
+        }
+    }
+
+    // Ghost
+    if (player.active && !player.gameOver) {
+        const ghostY = getGhostY(player);
+        const piece = player.active;
+
+        for (let y = 0; y < piece.matrix.length; y++) {
+            for (let x = 0; x < piece.matrix[y].length; x++) {
+                if (!piece.matrix[y][x]) continue;
+
+                const by = ghostY + y;
+                const bx = piece.x + x;
+
+                if (by >= HIDDEN_ROWS) {
+                    drawGhostCell(ctx, bx, by, COLORS[piece.type]);
+                }
+            }
+        }
+
+        // Aktives Tetromino
+        for (let y = 0; y < piece.matrix.length; y++) {
+            for (let x = 0; x < piece.matrix[y].length; x++) {
+                if (!piece.matrix[y][x]) continue;
+
+                const bx = piece.x + x;
+                const by = piece.y + y;
+
+                if (by >= HIDDEN_ROWS) {
+                    drawCell(
+                        ctx,
+                        bx,
+                        by - HIDDEN_ROWS,
+                        COLORS[piece.type]
+                    );
+                }
+            }
+        }
+    }
+
+    // Top-out-Anzeige
+    if (player.gameOver) {
+        ctx.fillStyle = "#080b12cc";
+        ctx.fillRect(0, 0, 300, 600);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+        ctx.font = "900 24px system-ui";
+        ctx.fillText("TOP OUT", 150, 285);
+
+        ctx.font = "12px system-ui";
+        ctx.fillStyle = "#aab5ca";
+        ctx.fillText("Runde beendet", 150, 312);
+    }
+
+    // Angriffshinweis
+    if (player.flashUntil > performance.now() && player.lastClear) {
+        ctx.save();
+        ctx.fillStyle = "#000000bb";
+        ctx.fillRect(20, 245, 260, 65);
+
+        ctx.textAlign = "center";
+        ctx.fillStyle = player.id === 1 ? "#46d9ff" : "#ff638e";
+        ctx.font = "900 24px system-ui";
+        ctx.fillText(player.lastClear, 150, 273);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 12px system-ui";
+        ctx.fillText(
+            player.lastAttack > 0
+                ? "+" + player.lastAttack + " GARBAGE"
+                : "LINE CLEAR",
+            150, 294
+        );
+
+        ctx.restore();
+    }
+}
+
+function drawMiniPiece(ctx, type, centerX, centerY, size) {
+    if (!type) return;
+
+    const matrix = PIECES[type];
+    const occupied = [];
+
+    for (let y = 0; y < matrix.length; y++) {
+        for (let x = 0; x < matrix[y].length; x++) {
+            if (matrix[y][x]) occupied.push([x, y]);
+        }
+    }
+
+    if (!occupied.length) return;
+
+    const minX = Math.min(...occupied.map(c => c[0]));
+    const maxX = Math.max(...occupied.map(c => c[0]));
+    const minY = Math.min(...occupied.map(c => c[1]));
+    const maxY = Math.max(...occupied.map(c => c[1]));
+
+    const width = (maxX - minX + 1) * size;
+    const height = (maxY - minY + 1) * size;
+
+    const offsetX = centerX - width / 2;
+    const offsetY = centerY - height / 2;
+
+    for (const [x, y] of occupied) {
+        ctx.fillStyle = COLORS[type];
+        ctx.fillRect(
+            offsetX + (x - minX) * size + 1,
+            offsetY + (y - minY) * size + 1,
+            size - 2,
+            size - 2
+        );
+    }
+}
+
+function drawHold(player) {
+    const ctx = player.holdCanvas.getContext("2d");
+    ctx.clearRect(0, 0, player.holdCanvas.width, player.holdCanvas.height);
+
+    if (!player.hold) {
+        ctx.fillStyle = "#66738c";
+        ctx.font = "11px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("EMPTY", 55, 37);
+        return;
+    }
+
+    ctx.globalAlpha = player.canHold ? 1 : 0.4;
+    drawMiniPiece(ctx, player.hold, 55, 32, 16);
+    ctx.globalAlpha = 1;
+}
+
+function drawNext(player) {
+    const ctx = player.nextCanvas.getContext("2d");
+    ctx.clearRect(0, 0, player.nextCanvas.width, player.nextCanvas.height);
+
+    fillQueue(player, 7);
+
+    for (let i = 0; i < 5; i++) {
+        drawMiniPiece(ctx, player.queue[i], 55, 25 + i * 48, 13);
+    }
+}
+
+function updateStats(player) {
+    const id = player.id;
+
+    document.getElementById("points" + id).textContent =
+        player.score.toLocaleString("de-CH");
+
+    document.getElementById("lines" + id).textContent =
+        player.totalLines;
+
+    document.getElementById("combo" + id).textContent =
+        player.combo > 0 ? "×" + player.combo : "0";
+
+    const comboBadge = document.getElementById("comboBadge" + id);
+    comboBadge.textContent = player.combo > 0
+        ? "COMBO ×" + player.combo
+        : "COMBO ×0";
+    comboBadge.style.opacity = player.combo > 0 ? "1" : ".55";
+    comboBadge.style.color = player.combo >= 3 ? "#ffd166" : "#8994ac";
+
+    document.getElementById("b2b" + id).textContent =
+        player.backToBack ? "ON" : "OFF";
+
+    document.getElementById("b2b" + id).style.color =
+        player.backToBack ? "#63f5b1" : "#8994ac";
+
+    document.getElementById("garbageCount" + id).textContent =
+        player.pendingGarbage.length;
+
+    const meter = document.getElementById("garbageMeter" + id);
+    meter.innerHTML = "";
+
+    // Ein Segment pro angekündigter Linie; maximal 20 Segmente passen auf die Höhe.
+    const visibleLines = Math.min(20, player.pendingGarbage.length);
+    for (let i = 0; i < visibleLines; i++) {
+        const block = document.createElement("span");
+        block.title = (i + 1) + " / " + player.pendingGarbage.length + " Garbage-Linien";
+        meter.appendChild(block);
+    }
+
+    const status = document.getElementById("status" + id);
+
+    if (player.gameOver) {
+        status.textContent = "TOP OUT";
+        status.style.color = "#ff638e";
+    } else if (player.pendingGarbage.length > 0) {
+        status.textContent = "GARBAGE INCOMING";
+        status.style.color = "#ff638e";
+    } else if (player.backToBack) {
+        status.textContent = "BACK-TO-BACK";
+        status.style.color = "#63f5b1";
+    } else {
+        status.textContent = "IN GAME";
+        status.style.color = "#8994ac";
+    }
+}
+
+function render() {
+    for (const player of players) {
+        drawBoard(player);
+        drawHold(player);
+        drawNext(player);
+        updateStats(player);
+    }
+}
+
+/* ============================================================
+   GRAVITY UND LOCK DELAY
+============================================================ */
+
+function updatePlayer(player, now, delta) {
+    if (!gameRunning || player.gameOver || !player.active) return;
+
+    const softHeld = heldKeys.has(CONTROL[player.id].soft);
+    const interval = softHeld
+        ? Math.max(10, gravityMs / softMultiplier)
+        : gravityMs;
+
+    if (now - player.lastFall >= interval) {
+        if (movePiece(player, 0, 1)) {
+            if (softHeld) player.score += 1;
+        }
+
+        player.lastFall = now;
+    }
+
+    if (collides(player, player.active, 0, 1)) {
+        if (player.lockTime === null) {
+            player.lockTime = now;
+        }
+
+        // Lock Delay: 500 ms, mit begrenzten Resets durch Bewegung/Rotation.
+        if (now - player.lockTime >= 500) {
+            lockPiece(player);
+        }
+    } else {
+        player.lockTime = null;
+    }
+}
+
+/* ============================================================
+   DAS / ARR: AUTOMATISCHES NACHDRÜCKEN
+============================================================ */
+
+function processHeldMovement(now) {
+    if (!gameRunning) return;
+
+    for (const player of players) {
+        const controls = CONTROL[player.id];
+
+        for (const [key, state] of heldKeys) {
+            if (key !== controls.left && key !== controls.right) continue;
+
+            if (state.playerId !== player.id) continue;
+
+            const elapsed = now - state.started;
+
+            if (!state.repeating && elapsed >= dasMs) {
+                state.repeating = true;
+                state.lastRepeat = now;
+
+                const dx = key === controls.left ? -1 : 1;
+
+                if (arrMs === 0) {
+                    while (movePiece(player, dx, 0)) {}
+                } else {
+                    movePiece(player, dx, 0);
+                }
+            } else if (state.repeating && arrMs > 0) {
+                let safety = 0;
+
+                while (now - state.lastRepeat >= arrMs && safety < 20) {
+                    const dx = key === controls.left ? -1 : 1;
+
+                    if (!movePiece(player, dx, 0)) break;
+
+                    state.lastRepeat += arrMs;
+                    safety++;
+                }
+            }
+        }
+    }
+}
+
+/* ============================================================
+   TASTATUR
+============================================================ */
+
+function handleKeyDown(event) {
+    const key = event.code;
+
+    const controlsAll = Object.values(CONTROL);
+
+    const isGameKey = controlsAll.some(c =>
+        Object.values(c).includes(key)
+    );
+
+    if (isGameKey) {
+        event.preventDefault();
+    }
+
+    if (!gameRunning) return;
+
+    // Verhindert mehrfaches Auslösen durch Browser-Key-Repeat.
+    if (heldKeys.has(key)) return;
+
+    const player = players.find(p =>
+        Object.values(CONTROL[p.id]).includes(key)
+    );
+
+    if (!player || player.gameOver) return;
+
+    const controls = CONTROL[player.id];
+
+    if (key === controls.left || key === controls.right) {
+        const dx = key === controls.left ? -1 : 1;
+
+        movePiece(player, dx, 0);
+
+        heldKeys.set(key, {
+            started: performance.now(),
+            lastRepeat: performance.now(),
+            repeating: false,
+            playerId: player.id
+        });
+
+        return;
+    }
+
+    if (key === controls.soft) {
+        heldKeys.set(key, {
+            started: performance.now(),
+            playerId: player.id
+        });
+
+        return;
+    }
+
+    if (key === controls.hard) {
+        hardDrop(player);
+        return;
+    }
+
+    if (key === controls.ccw) {
+        rotatePiece(player, -1);
+        return;
+    }
+
+    if (key === controls.cw) {
+        rotatePiece(player, 1);
+        return;
+    }
+
+    if (key === controls.hold) {
+        holdPiece(player);
+    }
+}
+
+function handleKeyUp(event) {
+    heldKeys.delete(event.code);
+}
+
+window.addEventListener("keydown", handleKeyDown);
+window.addEventListener("keyup", handleKeyUp);
+window.addEventListener("blur", () => heldKeys.clear());
+
+/* ============================================================
+   HAUPTSCHLEIFE
+============================================================ */
+
+function gameLoop(now) {
+    animationFrame = requestAnimationFrame(gameLoop);
+
+    const delta = Math.min(now - lastFrame, 50);
+    lastFrame = now;
+
+    if (gameRunning) {
+        processHeldMovement(now);
+
+        for (const player of players) {
+            updatePlayer(player, now, delta);
+        }
+    }
+
+    if (!document.getElementById("game").classList.contains("hidden")) {
+        render();
+    }
+}
+
+/* ============================================================
+   START UND MENÜ
+============================================================ */
+
+function startGame() {
+    gravityMs = Number(document.getElementById("gravity").value);
+    softMultiplier = Number(document.getElementById("softDrop").value);
+
+    dasMs = Math.max(
+        50,
+        Math.min(500, Number(document.getElementById("das").value) || 150)
+    );
+
+    arrMs = Math.max(
+        0,
+        Math.min(200, Number(document.getElementById("arr").value) || 0)
+    );
+
+    clearTransitionTimer();
+    if (countdownTimer) {
+        clearTimeout(countdownTimer);
+        countdownTimer = null;
+    }
+    countdownToken++;
+
+    document.getElementById("menu").classList.add("hidden");
+    document.getElementById("game").classList.remove("hidden");
+    hideOverlay();
+
+    players = [newPlayer(1), newPlayer(2)];
+
+    roundScores = [0, 0];
+    roundNumber = 1;
+    matchOver = false;
+    roundTransition = true;
+    heldKeys.clear();
+
+    for (const player of players) {
+        startPlayerRound(player);
+    }
+
+    updateScoreboard();
+    render();
+
+    beginCountdown(() => {
+        roundTransition = false;
+        gameRunning = true;
+        lastFrame = performance.now();
+        for (const player of players) {
+            player.lastFall = performance.now();
+        }
+    });
+}
+
+function returnToMenu() {
+    gameRunning = false;
+    matchOver = false;
+    roundTransition = false;
+    heldKeys.clear();
+
+    clearTransitionTimer();
+    countdownToken++;
+    if (countdownTimer) {
+        clearTimeout(countdownTimer);
+        countdownTimer = null;
+    }
+    document.getElementById("countdown").classList.add("hidden");
+
+    hideOverlay();
+
+    document.getElementById("game").classList.add("hidden");
+    document.getElementById("menu").classList.remove("hidden");
+}
+
+document.getElementById("startButton").addEventListener("click", startGame);
+document.getElementById("menuButton").addEventListener("click", returnToMenu);
+document.getElementById("overlayMenuButton").addEventListener("click", returnToMenu);
+
+/* ============================================================
+   LOS
+============================================================ */
+
+render();
+requestAnimationFrame(gameLoop);
+
+</script>
+</body>
+</html>
