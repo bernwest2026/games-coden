@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+body {
+    margin: 0;
+    padding: 15px;
+    background: #17213f;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    color: #ffe66d;
+    font-size: 36px;
+}
+
+#score {
+    font-size: 25px;
+    margin: 15px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    width: 100%;
+    max-width: 400px;
+    aspect-ratio: 1;
+    margin: 0 auto;
+    padding: 6px;
+    box-sizing: border-box;
+    background: #0b1330;
+    border-radius: 10px;
+}
+
+.cell {
+    background: #2d3a5e;
+    border-radius: 4px;
+    min-width: 0;
+    aspect-ratio: 1;
+}
+
+.cell.filled {
+    background: var(--color);
+}
+
+#message {
+    margin: 15px 0;
+    min-height: 20px;
+}
+
+#pieces {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 15px auto;
+    max-width: 400px;
+}
+
+.piece {
+    flex: 1;
+    height: 95px;
+    background: #ffffff12;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.piece.selected {
+    border-color: #ffe66d;
+    background: #ffe66d22;
+}
+
+.piece.used {
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: 17px;
+    height: 17px;
+    border-radius: 3px;
+}
+
+button {
+    background: #ffe66d;
+    color: #17213f;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 22px;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🧩 Block Blast</h1>
+
+<div id="score">Punkte: 0</div>
+
+<!-- DAS EINZIGE SPIELFELD -->
+<div id="board"></div>
+
+<div id="message">Wähle einen Block aus!</div>
+
+<div id="pieces"></div>
+
+<button onclick="restart()">Neues Spiel</button>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let gameOver = false;
+
+function randomPiece() {
+    return {
+        shape: SHAPES[
+            Math.floor(Math.random() * SHAPES.length)
+        ].map(p => [...p]),
+        color: COLORS[
+            Math.floor(Math.random() * COLORS.length)
+        ]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    pieces = [randomPiece(), randomPiece(), randomPiece()];
+    selected = -1;
+    score = 0;
+    gameOver = false;
+
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent =
+        "Punkte: " + score;
+
+    const board = document.getElementById("board");
+    board.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+            board.appendChild(cell);
+        }
+    }
+
+    const piecesEl = document.getElementById("pieces");
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, i) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === i) {
+            box.classList.add("selected");
+        }
+
+        const rows = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const cols = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${cols}, 17px)`;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+            selected = i;
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected === -1 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [randomPiece(), randomPiece(), randomPiece()];
+    }
+
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("message").textContent =
+            "Spiel vorbei! Punkte: " + score;
+    } else {
+        document.getElementById("message").textContent =
+            "Gut gemacht! Wähle den nächsten Block.";
+    }
+}
+
+function clearLines() {
+    const rows = [];
+    const cols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            rows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            cols.push(c);
+        }
+    }
+
+    for (const r of rows) {
+        grid[r].fill(null);
+    }
+
+    for (const c of cols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = rows.length + cols.length;
+    score += lines * 10;
+}
+
+function hasMoves() {
+    return pieces.some(piece => {
+        if (!piece) return false;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(piece, r, c)) return true;
+            }
+        }
+
+        return false;
+    });
+}
+
+restart();
+</script>
+
+</body>
+</html>

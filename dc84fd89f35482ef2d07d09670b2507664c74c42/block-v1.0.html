@@ -1,0 +1,6156 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Block Blast</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #101b40, #241447);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+}
+
+.game {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 42px;
+    margin: 5px 0 15px;
+    color: #ffe66d;
+    text-shadow: 0 4px 0 #d77b24;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    background: #ffffff12;
+    border: 1px solid #ffffff20;
+    border-radius: 15px;
+    padding: 13px;
+    margin-bottom: 15px;
+}
+
+.stat {
+    font-size: 13px;
+    color: #c6d4ff;
+}
+
+.stat strong {
+    display: block;
+    color: white;
+    font-size: 24px;
+    margin-top: 5px;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    background: #0c1534;
+    padding: 7px;
+    border-radius: 12px;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 8px 25px #0005;
+}
+
+.cell {
+    background: #29365b;
+    border-radius: 4px;
+    aspect-ratio: 1;
+    min-width: 0;
+    transition: background .12s;
+}
+
+.cell.filled {
+    background: var(--color);
+    box-shadow: inset 0 -3px 0 #0002,
+                inset 0 2px 0 #ffffff35;
+}
+
+.cell.hint {
+    outline: 2px solid white;
+}
+
+#message {
+    min-height: 25px;
+    margin: 12px 0;
+    color: #ffe66d;
+    font-weight: bold;
+}
+
+.pieces {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 8px;
+    min-height: 115px;
+    margin: 8px 0 15px;
+}
+
+.piece {
+    flex: 1;
+    min-width: 0;
+    min-height: 95px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: #ffffff10;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 5px;
+    touch-action: manipulation;
+}
+
+.piece.selected {
+    background: #ffe66d22;
+    border-color: #ffe66d;
+    transform: translateY(-4px);
+}
+
+.piece.used {
+    opacity: .2;
+    pointer-events: none;
+}
+
+.mini {
+    display: grid;
+    gap: 3px;
+}
+
+.mini-cell {
+    width: clamp(10px, 3.4vw, 17px);
+    aspect-ratio: 1;
+    border-radius: 3px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffe66d;
+    color: #21183c;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 13px 22px;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+.help {
+    color: #b8c5ed;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: #090d20dd;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.dialog {
+    background: #202d55;
+    padding: 30px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    box-shadow: 0 15px 50px #0008;
+}
+
+.dialog h2 {
+    color: #ffe66d;
+}
+</style>
+</head>
+
+<body>
+<div class="game">
+    <h1>🧩 Block Blast</h1>
+
+    <div class="stats">
+        <div class="stat">
+            PUNKTE
+            <strong id="score">0</strong>
+        </div>
+        <div class="stat">
+            BESTWERT
+            <strong id="best">0</strong>
+        </div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="message">Wähle einen Block aus!</div>
+
+    <div class="pieces" id="pieces"></div>
+
+    <button onclick="restart()">🔄 Neues Spiel</button>
+
+    <p class="help">
+        Tippe auf einen Block und danach auf das Spielfeld.<br>
+        Fülle ganze Reihen oder Spalten, um sie zu löschen!
+    </p>
+</div>
+
+<div class="overlay" id="overlay">
+    <div class="dialog">
+        <h2>🎮 Spiel vorbei!</h2>
+        <p>Deine Punkte: <strong id="finalScore">0</strong></p>
+        <button onclick="restart()">Nochmal spielen!</button>
+    </div>
+</div>
+
+<script>
+const SIZE = 8;
+
+const COLORS = [
+    "#ff5964",
+    "#ff9f1c",
+    "#ffe66d",
+    "#43d9a3",
+    "#36c5f0",
+    "#8b7cff",
+    "#f76fcb"
+];
+
+const SHAPES = [
+    [[0,0]],
+    [[0,0],[0,1]],
+    [[0,0],[1,0]],
+    [[0,0],[0,1],[0,2]],
+    [[0,0],[1,0],[2,0]],
+    [[0,0],[0,1],[1,0],[1,1]],
+    [[0,0],[0,1],[0,2],[1,0]],
+    [[0,0],[1,0],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[1,1]],
+    [[0,0],[1,0],[2,0],[2,1]],
+    [[0,0],[0,1],[1,1],[1,2]],
+    [[0,0],[0,1],[0,2],[0,3]],
+    [[0,0],[1,0],[2,0],[3,0]],
+    [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],
+    [[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+    [[0,0],[1,0],[2,0],[1,1]],
+    [[0,0],[0,1],[1,1]],
+    [[0,0],[1,0],[1,1]]
+];
+
+let grid;
+let pieces;
+let selected = -1;
+let score = 0;
+let best = 0;
+let gameOver = false;
+
+try {
+    best = Number(localStorage.getItem("blockblast-best")) || 0;
+} catch (e) {}
+
+const boardEl = document.getElementById("board");
+const piecesEl = document.getElementById("pieces");
+
+function randomPiece() {
+    const shape = SHAPES[
+        Math.floor(Math.random() * SHAPES.length)
+    ];
+
+    return {
+        shape: shape.map(p => [...p]),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+}
+
+function restart() {
+    grid = Array.from(
+        { length: SIZE },
+        () => Array(SIZE).fill(null)
+    );
+
+    score = 0;
+    selected = -1;
+    gameOver = false;
+
+    pieces = [
+        randomPiece(),
+        randomPiece(),
+        randomPiece()
+    ];
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("message").textContent =
+        "Wähle einen Block aus!";
+
+    render();
+}
+
+function render() {
+    document.getElementById("score").textContent = score;
+    document.getElementById("best").textContent = best;
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+
+            if (grid[r][c]) {
+                cell.classList.add("filled");
+                cell.style.setProperty("--color", grid[r][c]);
+            }
+
+            cell.addEventListener("click", () => place(r, c));
+
+            boardEl.appendChild(cell);
+        }
+    }
+
+    piecesEl.innerHTML = "";
+
+    pieces.forEach((piece, index) => {
+        const box = document.createElement("div");
+        box.className = "piece";
+
+        if (!piece) {
+            box.classList.add("used");
+            piecesEl.appendChild(box);
+            return;
+        }
+
+        if (selected === index) {
+            box.classList.add("selected");
+        }
+
+        const maxR = Math.max(...piece.shape.map(p => p[0])) + 1;
+        const maxC = Math.max(...piece.shape.map(p => p[1])) + 1;
+
+        const mini = document.createElement("div");
+        mini.className = "mini";
+        mini.style.gridTemplateColumns = `repeat(${maxC}, 1fr)`;
+
+        for (let r = 0; r < maxR; r++) {
+            for (let c = 0; c < maxC; c++) {
+                const square = document.createElement("div");
+                square.className = "mini-cell";
+
+                if (piece.shape.some(p => p[0] === r && p[1] === c)) {
+                    square.style.background = piece.color;
+                }
+
+                mini.appendChild(square);
+            }
+        }
+
+        box.appendChild(mini);
+
+        box.addEventListener("click", () => {
+            if (gameOver) return;
+
+            selected = index;
+
+            document.getElementById("message").textContent =
+                "Tippe auf das Spielfeld!";
+
+            render();
+        });
+
+        piecesEl.appendChild(box);
+    });
+}
+
+function canPlace(piece, row, col) {
+    return piece.shape.every(([dr, dc]) => {
+        const r = row + dr;
+        const c = col + dc;
+
+        return r >= 0 && r < SIZE &&
+               c >= 0 && c < SIZE &&
+               grid[r][c] === null;
+    });
+}
+
+function place(row, col) {
+    if (gameOver) return;
+
+    if (selected < 0 || !pieces[selected]) {
+        document.getElementById("message").textContent =
+            "Wähle zuerst einen Block!";
+        return;
+    }
+
+    const piece = pieces[selected];
+
+    if (!canPlace(piece, row, col)) {
+        document.getElementById("message").textContent =
+            "Hier passt der Block nicht hin!";
+        return;
+    }
+
+    for (const [dr, dc] of piece.shape) {
+        grid[row + dr][col + dc] = piece.color;
+    }
+
+    score += piece.shape.length;
+    pieces[selected] = null;
+    selected = -1;
+
+    clearLines();
+
+    if (pieces.every(p => p === null)) {
+        pieces = [
+            randomPiece(),
+            randomPiece(),
+            randomPiece()
+        ];
+    }
+
+    updateBest();
+    render();
+
+    if (!hasMoves()) {
+        gameOver = true;
+        document.getElementById("finalScore").textContent = score;
+        document.getElementById("overlay").classList.add("show");
+    } else {
+        document.getElementById("message").textContent =
+            "Super! Weiter geht's! 🎉";
+    }
+}
+
+function clearLines() {
+    const fullRows = [];
+    const fullCols = [];
+
+    for (let r = 0; r < SIZE; r++) {
+        if (grid[r].every(cell => cell !== null)) {
+            fullRows.push(r);
+        }
+    }
+
+    for (let c = 0; c < SIZE; c++) {
+        if (grid.every(row => row[c] !== null)) {
+            fullCols.push(c);
+        }
+    }
+
+    for (const r of fullRows) {
+        for (let c = 0; c < SIZE; c++) {
+            grid[r][c] = null;
+        }
+    }
+
+    for (const c of fullCols) {
+        for (let r = 0; r < SIZE; r++) {
+            grid[r][c] = null;
+        }
+    }
+
+    const lines = fullRows.length + fullCols.length;
+
+    if (lines > 0) {
+        score += lines * 10 + (lines > 1 ? lines * 5 : 0);
+
+        document.getElementById("message").textContent =
+            `💥 ${lines} Linie${lines > 1 ? "n" : ""} gelöscht!`;
+    }
+}
+
+function hasMoves() {
+    for (let i = 0; i < pieces.length; i++) {
+        if (!pieces[i]) continue;
+
+        for (let r = 0; r < SIZE; r++) {
+            for (let c = 0; c < SIZE; c++) {
+                if (canPlace(pieces[i], r, c)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+function updateBest() {
+    if (score > best) {
+        best = score;
+
+        try {
+            localStorage.setItem("blockblast-best", best);
+        } catch (e) {}
+    }
+}
+
+restart();
+</script>
+</body>
+</html>
