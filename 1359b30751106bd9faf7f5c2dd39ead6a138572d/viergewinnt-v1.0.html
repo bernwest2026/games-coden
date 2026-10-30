@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vier Gewinnt 🎮</title>
+
+<style>
+:root {
+    --bg: #101827;
+    --panel: #1c2940;
+    --blue: #247bff;
+    --red: #ff4057;
+    --yellow: #ffdb4d;
+    --text: #f5f7ff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 24px 12px;
+    font-family: Arial, sans-serif;
+    color: var(--text);
+    background:
+        radial-gradient(circle at top, #243d68, transparent 60%),
+        var(--bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.app {
+    width: 100%;
+    max-width: 650px;
+    text-align: center;
+}
+
+h1 {
+    font-size: clamp(30px, 7vw, 48px);
+    margin: 0 0 8px;
+    color: var(--yellow);
+    text-shadow: 0 0 22px #ffdb4d44;
+}
+
+.subtitle {
+    color: #bdc9df;
+    margin-bottom: 24px;
+}
+
+.panel {
+    background: #1c2940dd;
+    border: 1px solid #ffffff15;
+    padding: 18px;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px #0005;
+}
+
+.settings {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+label {
+    color: #d5dff1;
+    font-size: 14px;
+}
+
+select, .control-button {
+    color: white;
+    background: #293a56;
+    border: 1px solid #ffffff25;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+select:focus-visible, button:focus-visible {
+    outline: 3px solid white;
+    outline-offset: 3px;
+}
+
+.status {
+    min-height: 58px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: clamp(16px, 4vw, 21px);
+    font-weight: bold;
+    margin-bottom: 14px;
+}
+
+.scores {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.score-card {
+    background: #ffffff08;
+    padding: 12px;
+    border: 2px solid transparent;
+    border-radius: 14px;
+}
+
+.score-card.active {
+    border-color: #ffffff80;
+    background: #ffffff12;
+}
+
+.score-name {
+    font-size: 14px;
+    color: #c9d4e8;
+}
+
+.score-value {
+    font-size: 30px;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+.red-text {
+    color: var(--red);
+}
+
+.yellow-text {
+    color: var(--yellow);
+}
+
+.board {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: clamp(4px, 1.4vw, 9px);
+    padding: clamp(7px, 2vw, 14px);
+    background: linear-gradient(145deg, #318aff, #1454c6);
+    border-radius: 17px;
+    box-shadow:
+        inset 0 3px 8px #ffffff25,
+        0 12px 28px #0004;
+}
+
+.cell {
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #101b30;
+    box-shadow: inset 0 5px 9px #0009;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s;
+    overflow: hidden;
+}
+
+.cell:hover:not(:disabled) {
+    transform: scale(1.04);
+}
+
+.cell:disabled {
+    cursor: default;
+}
+
+.disc {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    transform: scale(0.88);
+    animation: drop 0.25s ease-out;
+}
+
+.disc.red {
+    background: radial-gradient(circle at 30% 25%, #ff9aa7, var(--red) 48%, #b91835);
+    box-shadow: inset 0 -4px 6px #7c001c77;
+}
+
+.disc.yellow {
+    background: radial-gradient(circle at 30% 25%, #fff5a5, var(--yellow) 48%, #d99d00);
+    box-shadow: inset 0 -4px 6px #90630077;
+}
+
+.cell.winner {
+    outline: 4px solid white;
+    outline-offset: -5px;
+    z-index: 1;
+    animation: pulse 0.7s infinite alternate;
+}
+
+@keyframes drop {
+    from {
+        transform: translateY(-150%) scale(0.8);
+        opacity: 0.3;
+    }
+    to {
+        transform: translateY(0) scale(0.88);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    from {
+        filter: brightness(1);
+    }
+    to {
+        filter: brightness(1.5);
+    }
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+.control-button {
+    font-weight: bold;
+    padding: 12px 17px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.control-button:hover {
+    transform: translateY(-2px);
+    background: #3b5072;
+}
+
+.primary {
+    color: #101827;
+    background: var(--yellow);
+    border-color: transparent;
+}
+
+.primary:hover {
+    background: #ffeb91;
+}
+
+.help {
+    margin-top: 20px;
+    color: #aab9d2;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.footer {
+    margin-top: 18px;
+    font-size: 12px;
+    color: #8293af;
+}
+
+@media (max-width: 420px) {
+    .panel {
+        padding: 10px;
+    }
+
+    .settings {
+        gap: 7px;
+    }
+
+    .board {
+        gap: 4px;
+        padding: 6px;
+    }
+
+    .control-button {
+        padding: 11px 12px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<main class="app">
+    <h1>🔴 VIER GEWINNT 🟡</h1>
+    <p class="subtitle">Vier Steine verbinden. Das Spiel gewinnen!</p>
+
+    <section class="panel">
+
+        <div class="settings">
+            <label for="mode">Spielmodus:</label>
+            <select id="mode">
+                <option value="human">👥 Zwei Spieler</option>
+                <option value="easy">🤖 Computer – Einfach</option>
+                <option value="medium">🤖 Computer – Mittel</option>
+                <option value="hard">🤖 Computer – Schwer</option>
+            </select>
+
+            <button class="control-button" id="soundButton"
+                    aria-pressed="true">
+                🔊 Sound an
+            </button>
+        </div>
+
+        <div class="status" id="status" aria-live="polite">
+            🔴 Spieler Rot ist dran!
+        </div>
+
+        <div class="scores">
+            <div class="score-card active" id="redCard">
+                <div class="score-name red-text" id="redName">
+                    🔴 Spieler Rot
+                </div>
+                <div class="score-value" id="redScore">0</div>
+            </div>
+
+            <div class="score-card" id="yellowCard">
+                <div class="score-name yellow-text" id="yellowName">
+                    🟡 Spieler Gelb
+                </div>
+                <div class="score-value" id="yellowScore">0</div>
+            </div>
+        </div>
+
+        <div class="board" id="board"
+             role="group" aria-label="4-Gewinnt-Spielfeld"></div>
+
+        <div class="controls">
+            <button class="control-button primary" id="newGame">
+                🔄 Neues Spiel
+            </button>
+
+            <button class="control-button" id="resetScore">
+                🏆 Punktestand löschen
+            </button>
+        </div>
+
+        <div class="help">
+            Wähle eine Spalte, um deinen Stein fallen zu lassen.<br>
+            Vier Steine in einer Reihe gewinnen – waagerecht,
+            senkrecht oder diagonal!
+        </div>
+    </section>
+
+    <div class="footer">
+        Viel Spaß beim Spielen! 🎮
+    </div>
+</main>
+
+<script>
+"use strict";
+
+const ROWS = 6;
+const COLS = 7;
+const HUMAN = 1;
+const COMPUTER = 2;
+
+const boardElement = document.getElementById("board");
+const statusElement = document.getElementById("status");
+const modeElement = document.getElementById("mode");
+
+let board = [];
+let currentPlayer = HUMAN;
+let gameOver = false;
+let computerThinking = false;
+let soundEnabled = true;
+let scores = { 1: 0, 2: 0 };
+let winningCells = [];
+let audioContext = null;
+let computerTimer = null;
+
+function newGame() {
+    clearTimeout(computerTimer);
+
+    board = Array.from(
+        { length: ROWS },
+        () => Array(COLS).fill(0)
+    );
+
+    currentPlayer = HUMAN;
+    gameOver = false;
+    computerThinking = false;
+    winningCells = [];
+
+    updateNames();
+    renderBoard();
+    updateScores();
+    updateStatus();
+}
+
+function updateNames() {
+    const computerMode = modeElement.value !== "human";
+
+    document.getElementById("redName").textContent =
+        "🔴 " + (computerMode ? "Du" : "Spieler Rot");
+
+    document.getElementById("yellowName").textContent =
+        "🟡 " + (computerMode ? "Computer" : "Spieler Gelb");
+}
+
+function updateScores() {
+    document.getElementById("redScore").textContent = scores[1];
+    document.getElementById("yellowScore").textContent = scores[2];
+}
+
+function updateStatus() {
+    document.getElementById("redCard").classList.toggle(
+        "active", currentPlayer === 1 && !gameOver
+    );
+
+    document.getElementById("yellowCard").classList.toggle(
+        "active", currentPlayer === 2 && !gameOver
+    );
+
+    if (gameOver) return;
+
+    if (computerThinking) {
+        statusElement.textContent = "🤖 Der Computer denkt nach ...";
+    } else if (currentPlayer === 1) {
+        statusElement.textContent = "🔴 Du bist dran!";
+    } else if (modeElement.value === "human") {
+        statusElement.textContent = "🟡 Spieler Gelb ist dran!";
+    } else {
+        statusElement.textContent = "🟡 Der Computer ist dran!";
+    }
+}
+
+function renderBoard() {
+    boardElement.innerHTML = "";
+
+    for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+            const cell = document.createElement("button");
+
+            cell.type = "button";
+            cell.className = "cell";
+
+            const player = board[row][col];
+            const isWinningCell = winningCells.some(
+                p => p.row === row && p.col === col
+            );
+
+            let label = "Leer";
+
+            if (player === HUMAN) label = "Rot";
+            if (player === COMPUTER) label = "Gelb";
+
+            cell.setAttribute(
+                "aria-label",
+                `Reihe ${row + 1}, Spalte ${col + 1}: ${label}`
+            );
+
+            if (player !== 0) {
+                const disc = document.createElement("span");
+                disc.className =
+                    "disc " + (player === 1 ? "red" : "yellow");
+
+                cell.appendChild(disc);
+            }
+
+            if (isWinningCell) {
+                cell.classList.add("winner");
+            }
+
+            cell.disabled =
+                gameOver ||
+                computerThinking ||
+                (modeElement.value !== "human" &&
+                 currentPlayer === COMPUTER) ||
+                !getAvailableRow(col).length;
+
+            cell.addEventListener("click", () => playColumn(col));
+
+            boardElement.appendChild(cell);
+        }
+    }
+}
+
+function getAvailableRow(col) {
+    for (let row = ROWS - 1; row >= 0; row--) {
+        if (board[row][col] === 0) {
+            return [row];
+        }
+    }
+
+    return [];
+}
+
+function playColumn(col) {
+    if (gameOver || computerThinking) return;
+
+    if (modeElement.value !== "human" && currentPlayer === COMPUTER) {
+        return;
+    }
+
+    makeMove(col, currentPlayer);
+}
+
+function makeMove(col, player) {
+    const available = getAvailableRow(col);
+
+    if (available.length === 0 || gameOver) return false;
+
+    const row = available[0];
+    board[row][col] = player;
+
+    playSound(player === 1 ? 420 : 560, 0.09);
+
+    const win = checkWinner(row, col, player);
+
+    if (win.length >= 4) {
+        winningCells = win;
+        gameOver = true;
+
+        scores[player]++;
+        renderBoard();
+        updateScores();
+
+        statusElement.textContent =
+            player === HUMAN
+                ? (modeElement.value === "human"
+                    ? "🏆 Spieler Rot gewinnt!"
+                    : "🏆 Du hast gewonnen!")
+                : (modeElement.value === "human"
+                    ? "🏆 Spieler Gelb gewinnt!"
+                    : "🤖 Der Computer gewinnt!");
+
+        playSound(760, 0.25);
+        return true;
+    }
+
+    const isDraw = board.every(
+        rowArray => rowArray.every(cell => cell !== 0)
+    );
+
+    if (isDraw) {
+        gameOver = true;
+        renderBoard();
+        statusElement.textContent = "🤝 Unentschieden!";
+        playSound(300, 0.2);
+        return true;
+    }
+
+    currentPlayer = player === HUMAN ? COMPUTER : HUMAN;
+
+    renderBoard();
+    updateStatus();
+
+    if (modeElement.value !== "human" &&
+        currentPlayer === COMPUTER) {
+        computerThinking = true;
+        renderBoard();
+        updateStatus();
+
+        computerTimer = setTimeout(() => {
+            computerThinking = false;
+
+            if (gameOver) return;
+
+            const move = chooseComputerMove();
+            makeMove(move, COMPUTER);
+
+            if (!gameOver) {
+                updateStatus();
+                renderBoard();
+            }
+        }, 450);
+    }
+
+    return true;
+}
+
+function checkWinner(row, col, player) {
+    const directions = [
+        [0, 1],
+        [1, 0],
+        [1, 1],
+        [1, -1]
+    ];
+
+    for (const [dr, dc] of directions) {
+        const cells = [{ row, col }];
+
+        for (const sign of [1, -1]) {
+            let r = row + dr * sign;
+            let c = col + dc * sign;
+
+            while (
+                r >= 0 && r < ROWS &&
+                c >= 0 && c < COLS &&
+                board[r][c] === player
+            ) {
+                cells.push({ row: r, col: c });
+
+                r += dr * sign;
+                c += dc * sign;
+            }
+        }
+
+        if (cells.length >= 4) return cells;
+    }
+
+    return [];
+}
+
+function getValidMoves() {
+    const moves = [];
+
+    for (let col = 0; col < COLS; col++) {
+        if (getAvailableRow(col).length) moves.push(col);
+    }
+
+    return moves;
+}
+
+function simulateMove(col, player) {
+    const available = getAvailableRow(col);
+    if (!available.length) return null;
+
+    const row = available[0];
+    board[row][col] = player;
+
+    return { row, col };
+}
+
+function undoMove(move) {
+    if (move) board[move.row][move.col] = 0;
+}
+
+function findWinningMove(player) {
+    for (const col of getValidMoves()) {
+        const move = simulateMove(col, player);
+        const win = checkWinner(move.row, move.col, player).length >= 4;
+        undoMove(move);
+
+        if (win) return col;
+    }
+
+    return null;
+}
+
+function chooseComputerMove() {
+    const difficulty = modeElement.value;
+    const moves = getValidMoves();
+
+    if (!moves.length) return 3;
+
+    // Einfach: überwiegend zufällige Züge.
+    if (difficulty === "easy") {
+        if (Math.random() < 0.35) {
+            const winning = findWinningMove(COMPUTER);
+            if (winning !== null) return winning;
+        }
+
+        return moves[Math.floor(Math.random() * moves.length)];
+    }
+
+    // Mittel und schwer: eigenen Gewinn suchen und blockieren.
+    const winning = findWinningMove(COMPUTER);
+    if (winning !== null) return winning;
+
+    const blocking = findWinningMove(HUMAN);
+    if (blocking !== null) return blocking;
+
+    if (difficulty === "medium") {
+        return moves.sort(
+            (a, b) => Math.abs(3 - a) - Math.abs(3 - b)
+        )[0];
+    }
+
+    // Schwer: Minimax mit begrenzter Suchtiefe.
+    let bestScore = -Infinity;
+    let bestMoves = [];
+
+    for (const col of moves) {
+        const move = simulateMove(col, COMPUTER);
+        const score = minimax(4, -Infinity, Infinity, false);
+        undoMove(move);
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestMoves = [col];
+        } else if (score === bestScore) {
+            bestMoves.push(col);
+        }
+    }
+
+    return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+}
+
+function minimax(depth, alpha, beta, maximizing) {
+    if (findWinningMove(COMPUTER) !== null) {
+        return 100000 + depth;
+    }
+
+    if (findWinningMove(HUMAN) !== null) {
+        return -100000 - depth;
+    }
+
+    const moves = getValidMoves();
+
+    if (depth === 0 || moves.length === 0) {
+        return evaluateBoard();
+    }
+
+    if (maximizing) {
+        let value = -Infinity;
+
+        for (const col of moves) {
+            const move = simulateMove(col, COMPUTER);
+            value = Math.max(
+                value,
+                minimax(depth - 1, alpha, beta, false)
+            );
+            undoMove(move);
+
+            alpha = Math.max(alpha, value);
+            if (alpha >= beta) break;
+        }
+
+        return value;
+    }
+
+    let value = Infinity;
+
+    for (const col of moves) {
+        const move = simulateMove(col, HUMAN);
+        value = Math.min(
+            value,
+            minimax(depth - 1, alpha, beta, true)
+        );
+        undoMove(move);
+
+        beta = Math.min(beta, value);
+        if (alpha >= beta) break;
+    }
+
+    return value;
+}
+
+function evaluateBoard() {
+    let score = 0;
+
+    // Die Mitte ist strategisch besonders wichtig.
+    for (let row = 0; row < ROWS; row++) {
+        if (board[row][3] === COMPUTER) score += 4;
+        if (board[row][3] === HUMAN) score -= 4;
+    }
+
+    const directions = [
+        [0, 1],
+        [1, 0],
+        [1, 1],
+        [1, -1]
+    ];
+
+    for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+            for (const [dr, dc] of directions) {
+                const cells = [];
+
+                for (let i = 0; i < 4; i++) {
+                    const r = row + dr * i;
+                    const c = col + dc * i;
+
+                    if (
+                        r < 0 || r >= ROWS ||
+                        c < 0 || c >= COLS
+                    ) break;
+
+                    cells.push(board[r][c]);
+                }
+
+                if (cells.length !== 4) continue;
+
+                const comp = cells.filter(x => x === COMPUTER).length;
+                const human = cells.filter(x => x === HUMAN).length;
+                const empty = cells.filter(x => x === 0).length;
+
+                if (comp && human) continue;
+
+                if (comp === 3 && empty === 1) score += 12;
+                else if (comp === 2 && empty === 2) score += 3;
+
+                if (human === 3 && empty === 1) score -= 15;
+                else if (human === 2 && empty === 2) score -= 3;
+            }
+        }
+    }
+
+    return score;
+}
+
+function playSound(frequency, duration) {
+    if (!soundEnabled) return;
+
+    try {
+        audioContext ??= new (
+            window.AudioContext || window.webkitAudioContext
+        )();
+
+        if (audioContext.state === "suspended") {
+            audioContext.resume();
+        }
+
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = "sine";
+        oscillator.frequency.value = frequency;
+
+        gain.gain.setValueAtTime(0.12, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            audioContext.currentTime + duration
+        );
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + duration);
+    } catch (error) {
+        // Das Spiel funktioniert auch ohne Audio.
+    }
+}
+
+document.getElementById("newGame").addEventListener("click", newGame);
+
+document.getElementById("resetScore").addEventListener("click", () => {
+    scores = { 1: 0, 2: 0 };
+    updateScores();
+    newGame();
+});
+
+modeElement.addEventListener("change", newGame);
+
+document.getElementById("soundButton").addEventListener("click", event => {
+    soundEnabled = !soundEnabled;
+
+    event.currentTarget.textContent =
+        soundEnabled ? "🔊 Sound an" : "🔇 Sound aus";
+
+    event.currentTarget.setAttribute(
+        "aria-pressed",
+        String(soundEnabled)
+    );
+
+    if (soundEnabled) playSound(500, 0.1);
+});
+
+newGame();
+</script>
+
+</body>
+</html>

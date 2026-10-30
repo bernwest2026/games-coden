@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONNECT FOUR | Neon Edition</title>
+
+<style>
+:root {
+    --bg: #080b16;
+    --panel: #11182b;
+    --blue: #00d9ff;
+    --purple: #8b5cf6;
+    --red: #ff3864;
+    --yellow: #ffe45e;
+    --text: #f4f7ff;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 28px 16px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: var(--text);
+    background:
+        radial-gradient(ellipse at 15% 15%, #17346b66, transparent 40%),
+        radial-gradient(ellipse at 85% 85%, #6526a044, transparent 40%),
+        var(--bg);
+}
+
+button, select {
+    font: inherit;
+}
+
+.app {
+    max-width: 1050px;
+    margin: auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 7px 14px;
+    border: 1px solid #00d9ff55;
+    border-radius: 30px;
+    color: var(--blue);
+    background: #00d9ff0d;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+}
+
+h1 {
+    margin: 0;
+    font-size: clamp(32px, 6vw, 57px);
+    font-weight: 900;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #fff, var(--blue), #a78bfa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 20px #00d9ff22);
+}
+
+header p {
+    color: #8794b5;
+    margin-top: 10px;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 245px;
+    gap: 20px;
+    align-items: start;
+}
+
+.panel {
+    background: linear-gradient(145deg, #151e35ee, #0d1325ee);
+    border: 1px solid #ffffff12;
+    border-radius: 22px;
+    padding: 20px;
+    box-shadow: 0 25px 80px #0005;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.mode-label {
+    font-size: 11px;
+    color: #7f91b7;
+    letter-spacing: 2px;
+    font-weight: 800;
+    display: block;
+    margin-bottom: 7px;
+}
+
+select {
+    background: #1a2642;
+    color: white;
+    border: 1px solid #344566;
+    padding: 11px 12px;
+    border-radius: 10px;
+    outline: none;
+    max-width: 100%;
+}
+
+select:focus-visible,
+button:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 3px;
+}
+
+.status {
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 12px;
+    margin-bottom: 17px;
+    border-radius: 12px;
+    background: #ffffff06;
+    border: 1px solid #ffffff0c;
+    font-weight: 750;
+    text-align: center;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 13px currentColor;
+    flex-shrink: 0;
+}
+
+.status-dot.yellow {
+    background: var(--yellow);
+}
+
+.status-dot.blue {
+    background: var(--blue);
+}
+
+.scores {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.score {
+    padding: 13px;
+    border-radius: 13px;
+    border: 1px solid #ffffff12;
+    background: #ffffff04;
+    transition: .2s;
+}
+
+.score.active.red-card {
+    border-color: #ff386477;
+    background: #ff38640d;
+    box-shadow: 0 0 22px #ff386411;
+}
+
+.score.active.yellow-card {
+    border-color: #ffe45e77;
+    background: #ffe45e0c;
+    box-shadow: 0 0 22px #ffe45e11;
+}
+
+.score-label {
+    font-size: 12px;
+    color: #9aa8c6;
+}
+
+.score-number {
+    font-size: 29px;
+    font-weight: 900;
+    margin-top: 5px;
+}
+
+.red-text {
+    color: var(--red);
+}
+
+.yellow-text {
+    color: var(--yellow);
+}
+
+.board-wrap {
+    position: relative;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: clamp(4px, 1vw, 9px);
+    padding: clamp(8px, 2vw, 15px);
+    border-radius: 17px;
+    background: linear-gradient(145deg, #1765dc, #10379d);
+    border: 1px solid #61b7ff88;
+    box-shadow:
+        0 0 25px #167aff22,
+        inset 0 2px 8px #ffffff25,
+        0 15px 35px #0004;
+}
+
+.cell {
+    position: relative;
+    min-width: 0;
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #080f25;
+    box-shadow: inset 0 5px 10px #000b;
+    cursor: pointer;
+    overflow: hidden;
+    transition: filter .15s, transform .15s;
+}
+
+.cell:hover:not(:disabled) {
+    filter: brightness(1.3);
+    transform: scale(1.04);
+}
+
+.cell:disabled {
+    cursor: default;
+}
+
+.disc {
+    position: absolute;
+    inset: 2%;
+    border-radius: 50%;
+    animation: drop .28s cubic-bezier(.2, .9, .3, 1.2);
+}
+
+.disc.red {
+    background:
+        radial-gradient(circle at 30% 23%, #ffb1c2 0%, #ff3864 38%, #a80036 100%);
+    box-shadow:
+        inset 0 -5px 8px #6c002b88,
+        0 0 12px #ff386466;
+}
+
+.disc.yellow {
+    background:
+        radial-gradient(circle at 30% 23%, #fffbd0 0%, #ffe45e 38%, #d49b00 100%);
+    box-shadow:
+        inset 0 -5px 8px #825b0088,
+        0 0 12px #ffe45e66;
+}
+
+.cell.winner {
+    z-index: 2;
+    outline: 3px solid white;
+    outline-offset: -4px;
+    animation: winGlow .45s infinite alternate;
+}
+
+@keyframes drop {
+    from {
+        transform: translateY(-140%) scale(.65);
+        opacity: .5;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes winGlow {
+    from {
+        filter: brightness(1);
+        box-shadow: 0 0 8px white;
+    }
+    to {
+        filter: brightness(1.6);
+        box-shadow: 0 0 25px white;
+    }
+}
+
+/* RECHTE STEUERUNGSLEISTE */
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.side-title {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #8293b8;
+    margin: 0 0 13px;
+}
+
+.action {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    padding: 14px;
+    border-radius: 13px;
+    border: 1px solid #ffffff13;
+    background: #ffffff05;
+    color: white;
+    cursor: pointer;
+    transition: .2s;
+    margin-bottom: 9px;
+}
+
+.action:hover {
+    background: #ffffff0d;
+    border-color: #ffffff30;
+    transform: translateY(-2px);
+}
+
+.action.primary {
+    background: linear-gradient(120deg, #0878ff, #6847ed);
+    border-color: #6ba7ff66;
+    box-shadow: 0 7px 20px #2467ff22;
+}
+
+.action.primary:hover {
+    filter: brightness(1.15);
+}
+
+.action-icon {
+    font-size: 23px;
+    flex-shrink: 0;
+}
+
+.action strong {
+    display: block;
+    font-size: 13px;
+}
+
+.action small {
+    display: block;
+    color: #a0afd0;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.action.primary small {
+    color: #e0e9ff;
+}
+
+.info {
+    padding: 16px;
+    border-radius: 15px;
+    background: #ffffff04;
+    border: 1px solid #ffffff0e;
+}
+
+.info p {
+    font-size: 12px;
+    color: #9aa8c6;
+    line-height: 1.8;
+    margin: 0;
+}
+
+.info strong {
+    color: white;
+}
+
+.legend {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 17px;
+    font-size: 11px;
+    color: #9aa8c6;
+}
+
+.legend span {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.legend i {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+}
+
+.legend .red-dot {
+    background: var(--red);
+    box-shadow: 0 0 8px var(--red);
+}
+
+.legend .yellow-dot {
+    background: var(--yellow);
+    box-shadow: 0 0 8px var(--yellow);
+}
+
+.footer {
+    text-align: center;
+    margin-top: 24px;
+    color: #53617e;
+    font-size: 11px;
+    letter-spacing: 2px;
+}
+
+/* MOBILE */
+
+@media (max-width: 760px) {
+    .layout {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+    }
+
+    .sidebar .info {
+        grid-column: 1 / -1;
+    }
+
+    .panel {
+        padding: 14px;
+    }
+
+    .action {
+        padding: 12px 9px;
+    }
+
+    .action-icon {
+        font-size: 19px;
+    }
+}
+
+@media (max-width: 390px) {
+    body {
+        padding: 15px 8px;
+    }
+
+    .sidebar {
+        grid-template-columns: 1fr;
+    }
+
+    .sidebar .info {
+        grid-column: auto;
+    }
+
+    .board {
+        gap: 4px;
+        padding: 7px;
+    }
+
+    .topbar {
+        align-items: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<main class="app">
+
+<header>
+    <div class="badge">✦ ARCADE EDITION ✦</div>
+    <h1>CONNECT FOUR</h1>
+    <p>Vier verbinden. Deinen Gegner schlagen.</p>
+</header>
+
+<div class="layout">
+
+    <!-- SPIELFELD -->
+    <section class="panel">
+
+        <div class="topbar">
+            <div>
+                <label class="mode-label" for="mode">SPIELMODUS</label>
+                <select id="mode">
+                    <option value="human">👥 Zwei Spieler</option>
+                    <option value="easy">🤖 Computer – Einfach</option>
+                    <option value="medium">🤖 Computer – Mittel</option>
+                    <option value="hard">🤖 Computer – Schwer</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="status" id="status" aria-live="polite">
+            <span class="status-dot"></span>
+            <span id="statusText">Spieler Rot ist dran!</span>
+        </div>
+
+        <div class="scores">
+            <div class="score active red-card" id="redCard">
+                <div class="score-label red-text" id="redName">
+                    🔴 SPIELER ROT
+                </div>
+                <div class="score-number" id="redScore">0</div>
+            </div>
+
+            <div class="score yellow-card" id="yellowCard">
+                <div class="score-label yellow-text" id="yellowName">
+                    🟡 SPIELER GELB
+                </div>
+                <div class="score-number" id="yellowScore">0</div>
+            </div>
+        </div>
+
+        <div class="board-wrap">
+            <div class="board" id="board"
+                 role="group"
+                 aria-label="Vier Gewinnt Spielfeld"></div>
+        </div>
+
+        <div class="legend">
+            <span><i class="red-dot"></i> ROT</span>
+            <span><i class="yellow-dot"></i> GELB</span>
+            <span>⚡ NEON MODE</span>
+        </div>
+
+    </section>
+
+    <!-- RESET-KNOPF UND STEUERUNG NEBEN DEM SPIELFELD -->
+    <aside class="sidebar">
+
+        <section class="panel">
+            <h2 class="side-title">SPIELSTEUERUNG</h2>
+
+            <button class="action primary" id="newGame">
+                <span class="action-icon">↻</span>
+                <span>
+                    <strong>Reset Spiel</strong>
+                    <small>Neue Runde starten</small>
+                </span>
+            </button>
+
+            <button class="action" id="resetScore">
+                <span class="action-icon">🏆</span>
+                <span>
+                    <strong>Punkte zurücksetzen</strong>
+                    <small>Spielstand auf null</small>
+                </span>
+            </button>
+
+            <button class="action" id="soundButton"
+                    aria-pressed="true">
+                <span class="action-icon" id="soundIcon">🔊</span>
+                <span>
+                    <strong id="soundTitle">Sound aktiviert</strong>
+                    <small id="soundDescription">Neon-Soundeffekte</small>
+                </span>
+            </button>
+        </section>
+
+        <section class="info">
+            <h2 class="side-title">🎮 SPIELREGELN</h2>
+            <p>
+                <strong>01.</strong> Wähle eine Spalte.<br>
+                <strong>02.</strong> Verbinde vier Steine.<br>
+                <strong>03.</strong> Gewinne horizontal, vertikal
+                oder diagonal!
+            </p>
+        </section>
+
+        <section class="info">
+            <h2 class="side-title">⚡ PRO-TIPP</h2>
+            <p>
+                Kontrolliere die Mitte des Spielfelds und blockiere
+                mögliche Gewinnzüge deines Gegners.
+            </p>
+        </section>
+
+    </aside>
+
+</div>
+
+<div class="footer">DESIGNED FOR THE NEXT LEVEL</div>
+
+</main>
+
+<script>
+"use strict";
+
+const ROWS = 6;
+const COLS = 7;
+const HUMAN = 1;
+const COMPUTER = 2;
+
+const $ = id => document.getElementById(id);
+
+let board = [];
+let currentPlayer = HUMAN;
+let gameOver = false;
+let computerThinking = false;
+let soundEnabled = true;
+let scores = { 1: 0, 2: 0 };
+let winningCells = [];
+let computerTimer = null;
+let audioContext = null;
+
+function startGame() {
+    clearTimeout(computerTimer);
+
+    board = Array.from(
+        { length: ROWS },
+        () => Array(COLS).fill(0)
+    );
+
+    currentPlayer = HUMAN;
+    gameOver = false;
+    computerThinking = false;
+    winningCells = [];
+
+    updateNames();
+    updateScores();
+    renderBoard();
+    updateStatus();
+}
+
+function updateNames() {
+    const versusComputer = $("mode").value !== "human";
+
+    $("redName").textContent =
+        versusComputer ? "🔴 DU" : "🔴 SPIELER ROT";
+
+    $("yellowName").textContent =
+        versusComputer ? "🟡 COMPUTER" : "🟡 SPIELER GELB";
+}
+
+function updateScores() {
+    $("redScore").textContent = scores[1];
+    $("yellowScore").textContent = scores[2];
+}
+
+function updateStatus(message) {
+    if (message) {
+        $("statusText").textContent = message;
+    } else if (gameOver) {
+        return;
+    } else if (computerThinking) {
+        $("statusText").textContent = "Computer denkt nach ...";
+    } else if (currentPlayer === HUMAN) {
+        $("statusText").textContent =
+            $("mode").value === "human"
+                ? "Spieler Rot ist dran!"
+                : "Du bist dran!";
+    } else {
+        $("statusText").textContent =
+            $("mode").value === "human"
+                ? "Spieler Gelb ist dran!"
+                : "Der Computer ist dran!";
+    }
+
+    const dot = document.querySelector(".status-dot");
+
+    dot.className = "status-dot";
+
+    if (gameOver) {
+        dot.classList.add("blue");
+    } else if (currentPlayer === COMPUTER) {
+        dot.classList.add("yellow");
+    }
+}
+
+function getAvailableRow(col) {
+    for (let row = ROWS - 1; row >= 0; row--) {
+        if (board[row][col] === 0) return row;
+    }
+
+    return -1;
+}
+
+function renderBoard() {
+    $("board").innerHTML = "";
+
+    for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+            const cell = document.createElement("button");
+            cell.type = "button";
+            cell.className = "cell";
+
+            const player = board[row][col];
+
+            cell.setAttribute(
+                "aria-label",
+                `Reihe ${row + 1}, Spalte ${col + 1}: ` +
+                (player === 1 ? "Rot" :
+                 player === 2 ? "Gelb" : "Leer")
+            );
+
+            if (player !== 0) {
+                const disc = document.createElement("span");
+                disc.className =
+                    "disc " + (player === 1 ? "red" : "yellow");
+
+                cell.appendChild(disc);
+            }
+
+            if (winningCells.some(
+                p => p.row === row && p.col === col
+            )) {
+                cell.classList.add("winner");
+            }
+
+            cell.disabled =
+                gameOver ||
+                computerThinking ||
+                (currentPlayer === COMPUTER &&
+                 $("mode").value !== "human") ||
+                getAvailableRow(col) === -1;
+
+            cell.addEventListener("click", () => playColumn(col));
+
+            $("board").appendChild(cell);
+        }
+    }
+
+    $("redCard").classList.toggle(
+        "active", currentPlayer === HUMAN && !gameOver
+    );
+
+    $("yellowCard").classList.toggle(
+        "active", currentPlayer === COMPUTER && !gameOver
+    );
+}
+
+function playColumn(col) {
+    if (gameOver || computerThinking) return;
+
+    if ($("mode").value !== "human" &&
+        currentPlayer === COMPUTER) return;
+
+    makeMove(col, currentPlayer);
+}
+
+function makeMove(col, player) {
+    const row = getAvailableRow(col);
+
+    if (row === -1 || gameOver) return;
+
+    board[row][col] = player;
+
+    playDropSound(player);
+
+    const win = checkWinner(row, col, player);
+
+    if (win.length >= 4) {
+        winningCells = win;
+        gameOver = true;
+        scores[player]++;
+
+        renderBoard();
+        updateScores();
+
+        if ($("mode").value === "human") {
+            updateStatus(
+                player === HUMAN
+                    ? "🏆 SPIELER ROT GEWINNT!"
+                    : "🏆 SPIELER GELB GEWINNT!"
+            );
+        } else {
+            updateStatus(
+                player === HUMAN
+                    ? "🏆 DU HAST GEWONNEN!"
+                    : "🤖 DER COMPUTER GEWINNT!"
+            );
+        }
+
+        playVictorySound();
+        return;
+    }
+
+    const draw = board.every(
+        rowArray => rowArray.every(cell => cell !== 0)
+    );
+
+    if (draw) {
+        gameOver = true;
+        renderBoard();
+        updateStatus("🤝 UNENTSCHIEDEN!");
+        playDrawSound();
+        return;
+    }
+
+    currentPlayer = player === HUMAN ? COMPUTER : HUMAN;
+
+    renderBoard();
+    updateStatus();
+
+    if ($("mode").value !== "human" &&
+        currentPlayer === COMPUTER) {
+        computerThinking = true;
+        renderBoard();
+        updateStatus();
+
+        computerTimer = setTimeout(() => {
+            computerThinking = false;
+
+            if (gameOver) return;
+
+            const col = chooseComputerMove();
+
+            makeMove(col, COMPUTER);
+
+            if (!gameOver) {
+                renderBoard();
+                updateStatus();
+            }
+        }, 500);
+    }
+}
+
+function checkWinner(row, col, player) {
+    const directions = [
+        [0, 1],
+        [1, 0],
+        [1, 1],
+        [1, -1]
+    ];
+
+    for (const [dr, dc] of directions) {
+        const cells = [{ row, col }];
+
+        for (const sign of [1, -1]) {
+            let r = row + dr * sign;
+            let c = col + dc * sign;
+
+            while (
+                r >= 0 && r < ROWS &&
+                c >= 0 && c < COLS &&
+                board[r][c] === player
+            ) {
+                cells.push({ row: r, col: c });
+
+                r += dr * sign;
+                c += dc * sign;
+            }
+        }
+
+        if (cells.length >= 4) return cells;
+    }
+
+    return [];
+}
+
+function getValidMoves() {
+    const moves = [];
+
+    for (let col = 0; col < COLS; col++) {
+        if (getAvailableRow(col) !== -1) moves.push(col);
+    }
+
+    return moves;
+}
+
+function simulateMove(col, player) {
+    const row = getAvailableRow(col);
+
+    if (row === -1) return null;
+
+    board[row][col] = player;
+
+    return { row, col };
+}
+
+function undoMove(move) {
+    if (move) board[move.row][move.col] = 0;
+}
+
+function findWinningMove(player) {
+    for (const col of getValidMoves()) {
+        const move = simulateMove(col, player);
+
+        const wins =
+            checkWinner(move.row, move.col, player).length >= 4;
+
+        undoMove(move);
+
+        if (wins) return col;
+    }
+
+    return null;
+}
+
+function chooseComputerMove() {
+    const moves = getValidMoves();
+    const mode = $("mode").value;
+
+    if (!moves.length) return 3;
+
+    if (mode === "easy") {
+        const win = findWinningMove(COMPUTER);
+
+        if (win !== null && Math.random() < 0.65) return win;
+
+        return moves[Math.floor(Math.random() * moves.length)];
+    }
+
+    const win = findWinningMove(COMPUTER);
+    if (win !== null) return win;
+
+    const block = findWinningMove(HUMAN);
+    if (block !== null) return block;
+
+    if (mode === "medium") {
+        moves.sort((a, b) =>
+            Math.abs(a - 3) - Math.abs(b - 3)
+        );
+
+        return moves[0];
+    }
+
+    let bestScore = -Infinity;
+    let bestMoves = [];
+
+    for (const col of moves) {
+        const move = simulateMove(col, COMPUTER);
+        const score = minimax(4, -Infinity, Infinity, false);
+
+        undoMove(move);
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestMoves = [col];
+        } else if (score === bestScore) {
+            bestMoves.push(col);
+        }
+    }
+
+    return bestMoves[
+        Math.floor(Math.random() * bestMoves.length)
+    ];
+}
+
+function minimax(depth, alpha, beta, maximizing) {
+    const moves = getValidMoves();
+
+    if (depth === 0 || moves.length === 0) {
+        return evaluateBoard();
+    }
+
+    if (maximizing) {
+        let value = -Infinity;
+
+        for (const col of moves) {
+            const move = simulateMove(col, COMPUTER);
+
+            const won =
+                checkWinner(move.row, move.col, COMPUTER).length >= 4;
+
+            const score = won
+                ? 100000 + depth
+                : minimax(depth - 1, alpha, beta, false);
+
+            undoMove(move);
+
+            value = Math.max(value, score);
+            alpha = Math.max(alpha, value);
+
+            if (alpha >= beta) break;
+        }
+
+        return value;
+    }
+
+    let value = Infinity;
+
+    for (const col of moves) {
+        const move = simulateMove(col, HUMAN);
+
+        const won =
+            checkWinner(move.row, move.col, HUMAN).length >= 4;
+
+        const score = won
+            ? -100000 - depth
+            : minimax(depth - 1, alpha, beta, true);
+
+        undoMove(move);
+
+        value = Math.min(value, score);
+        beta = Math.min(beta, value);
+
+        if (alpha >= beta) break;
+    }
+
+    return value;
+}
+
+function evaluateBoard() {
+    let score = 0;
+
+    for (let row = 0; row < ROWS; row++) {
+        if (board[row][3] === COMPUTER) score += 5;
+        if (board[row][3] === HUMAN) score -= 5;
+    }
+
+    const directions = [
+        [0, 1],
+        [1, 0],
+        [1, 1],
+        [1, -1]
+    ];
+
+    for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+            for (const [dr, dc] of directions) {
+                const cells = [];
+
+                for (let i = 0; i < 4; i++) {
+                    const r = row + dr * i;
+                    const c = col + dc * i;
+
+                    if (
+                        r < 0 || r >= ROWS ||
+                        c < 0 || c >= COLS
+                    ) break;
+
+                    cells.push(board[r][c]);
+                }
+
+                if (cells.length !== 4) continue;
+
+                const comp = cells.filter(
+                    x => x === COMPUTER
+                ).length;
+
+                const human = cells.filter(
+                    x => x === HUMAN
+                ).length;
+
+                const empty = cells.filter(
+                    x => x === 0
+                ).length;
+
+                if (comp > 0 && human > 0) continue;
+
+                if (comp === 3 && empty === 1) score += 20;
+                else if (comp === 2 && empty === 2) score += 4;
+
+                if (human === 3 && empty === 1) score -= 25;
+                else if (human === 2 && empty === 2) score -= 4;
+            }
+        }
+    }
+
+    return score;
+}
+
+/* MODERNE SYNTHETISCHE SOUND-EFFEKTE */
+
+function getAudio() {
+    if (!soundEnabled) return null;
+
+    try {
+        if (!audioContext) {
+            audioContext = new (
+                window.AudioContext ||
+                window.webkitAudioContext
+            )();
+        }
+
+        if (audioContext.state === "suspended") {
+            audioContext.resume();
+        }
+
+        return audioContext;
+    } catch (error) {
+        return null;
+    }
+}
+
+function tone(freq, duration, type = "sine", volume = 0.08, delay = 0) {
+    const ctx = getAudio();
+    if (!ctx) return;
+
+    const start = ctx.currentTime + delay;
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(freq, start);
+    oscillator.frequency.exponentialRampToValueAtTime(
+        Math.max(40, freq * 0.72),
+        start + duration
+    );
+
+    filter.type = "lowpass";
+    filter.frequency.value = 3500;
+
+    gain.gain.setValueAtTime(0.001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        start + duration
+    );
+
+    oscillator.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.02);
+}
+
+function playDropSound(player) {
+    if (player === HUMAN) {
+        tone(520, 0.12, "triangle", 0.09);
+        tone(780, 0.09, "sine", 0.035, 0.035);
+    } else {
+        tone(350, 0.13, "sawtooth", 0.045);
+        tone(620, 0.1, "triangle", 0.05, 0.045);
+    }
+}
+
+function playVictorySound() {
+    const notes = [523, 659, 784, 1047, 784, 1047];
+
+    notes.forEach((note, i) => {
+        tone(note, 0.22, "triangle", 0.09, i * 0.13);
+    });
+
+    tone(1568, 0.5, "sine", 0.055, 0.8);
+}
+
+function playDrawSound() {
+    tone(400, 0.2, "triangle", 0.06);
+    tone(350, 0.25, "triangle", 0.06, 0.2);
+    tone(300, 0.3, "triangle", 0.06, 0.4);
+}
+
+/* BUTTONS */
+
+$("newGame").addEventListener("click", () => {
+    playDropSound(HUMAN);
+    startGame();
+});
+
+$("resetScore").addEventListener("click", () => {
+    scores = { 1: 0, 2: 0 };
+    updateScores();
+    startGame();
+    tone(700, 0.15, "triangle", 0.06);
+});
+
+$("mode").addEventListener("change", startGame);
+
+$("soundButton").addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+
+    $("soundIcon").textContent =
+        soundEnabled ? "🔊" : "🔇";
+
+    $("soundTitle").textContent =
+        soundEnabled ? "Sound aktiviert" : "Sound deaktiviert";
+
+    $("soundDescription").textContent =
+        soundEnabled ? "Neon-Soundeffekte" : "Stummgeschaltet";
+
+    $("soundButton").setAttribute(
+        "aria-pressed",
+        String(soundEnabled)
+    );
+
+    if (soundEnabled) tone(800, 0.15, "sine", 0.07);
+});
+
+startGame();
+</script>
+
+</body>
+</html>
