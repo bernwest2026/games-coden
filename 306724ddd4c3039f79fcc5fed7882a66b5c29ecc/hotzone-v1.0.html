@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Overwatch 2D - Kontrolle (Genji Nomad)</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        #ui {
+            display: flex;
+            justify-content: space-between;
+            width: 900px;
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .team-blue { color: #00a2ff; }
+        .team-red { color: #ff3333; }
+        .hud-center { text-align: center; font-size: 24px; color: #f57c00; }
+        canvas {
+            border: 4px solid #333;
+            background-color: #2b2b2b;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            cursor: crosshair;
+        }
+        #abilities {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            width: 900px;
+            justify-content: center;
+        }
+        .ability-box {
+            background: #444;
+            padding: 5px 15px;
+            border-radius: 5px;
+            border: 2px solid #666;
+            font-size: 14px;
+        }
+        .ready { border-color: #00ffcc; color: #00ffcc; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <div class="team-blue">BLAU (DEIN TEAM): <span id="score-blue">0</span>%</div>
+    <div class="hud-center">PUNKT: <span id="point-status">Neutral</span></div>
+    <div class="team-red">ROT (GEGNER): <span id="score-red">0</span>%</div>
+</div>
+
+<canvas id="gameCanvas" width="900" height="550"></canvas>
+
+<div id="abilities">
+    <div class="ability-box" id="hp-box">HP: 200/200</div>
+    <div class="ability-box ready" id="dash-box">L-SHIFT: Sturmangriff</div>
+    <div class="ability-box ready" id="deflect-box">E: Reflektieren</div>
+    <div class="ability-box" id="ult-box">Q: Klinge (0%)</div>
+</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Spielstatus
+const game = {
+    controlPoint: { x: 450, y: 275, radius: 70, owner: "neutral", captureProgress: 0, capturingTeam: "neutral" },
+    scoreBlue: 0,
+    scoreRed: 0,
+    winner: null
+};
+
+// Tastatur & Maus
+const keys = { w: false, a: false, s: false, d: false, Shift: false, e: false, q: false };
+const mouse = { x: 0, y: 0 };
+
+// Entitäten-Listen
+let players = [];
+let projectiles = [];
+let particles = [];
+
+// Spieler-Klasse (Genji)
+class Player {
+    constructor(x, y, team, isBot = true) {
+        this.x = x;
+        this.y = y;
+        this.team = team;
+        this.isBot = isBot;
+        this.radius = 16;
+        this.speed = 3.5;
+        this.hp = 200;
+        this.maxHp = 200;
+
+        // Cooldowns & Fähigkeiten-Zustände
+        this.dashCooldown = 0;
+        this.dashActive = 0;
+        this.dashDir = { x: 0, y: 0 };
+        this.deflectActive = 0;
+        this.deflectCooldown = 0;
+        this.ultProgress = 0;
+        this.ultActive = 0;
+
+        this.shootCooldown = 0;
+    }
+
+    update() {
+        if (this.hp <= 0) {
+            // Respawn
+            this.hp = this.maxHp;
+            this.x = this.team === "blue" ? 50 : 850;
+            this.y = 275;
+            this.deflectActive = 0;
+            this.ultActive = 0;
+            return;
+        }
+
+        // Reduziere Cooldowns
+        if (this.dashCooldown > 0) this.dashCooldown--;
+        if (this.deflectCooldown > 0) this.deflectCooldown--;
+        if (this.shootCooldown > 0) this.shootCooldown--;
+
+        if (this.dashActive > 0) {
+            this.x += this.dashDir.x * 12;
+            this.y += this.dashDir.y * 12;
+            this.dashActive--;
+            // Dash-Spurpartikel
+            particles.push({x: this.x, y: this.y, r: 5, color: "rgba(0, 255, 204, 0.4)", life: 10});
+            return; // Während des Dashes keine normale Bewegung
+        }
+
+        if (this.deflectActive > 0) this.deflectActive--;
+        if (this.ultActive > 0) {
+            this.ultActive--;
+            this.speed = 4.8; // Schneller während Ultimate
+        } else {
+            this.speed = 3.5;
+        }
+
+        if (!this.isBot) {
+            // Echte Spielersteuerung
+            let moveX = 0;
+            let moveY = 0;
+            if (keys.w) moveY = -1;
+            if (keys.s) moveY = 1;
+            if (keys.a) moveX = -1;
+            if (keys.d) moveX = 1;
+
+            // Normalisieren
+            if (moveX !== 0 && moveY !== 0) {
+                moveX *= 0.7071;
+                moveY *= 0.7071;
+            }
+            this.x += moveX * this.speed;
+            this.y += moveY * this.speed;
+
+            // Ult-Aufladung über Zeit für den Spieler
+            if (this.ultProgress < 100 && this.ultActive === 0) this.ultProgress += 0.05;
+
+        } else {
+            // Einfache Bot-KI: Bewege dich zum Kontrollpunkt
+            let targetX = game.controlPoint.x + (Math.random() * 40 - 20);
+            let targetY = game.controlPoint.y + (Math.random() * 40 - 20);
+
+            let dx = targetX - this.x;
+            let dy = targetY - this.y;
+            let dist = Math.hypot(dx, dy);
+
+            if (dist > 30) {
+                this.x += (dx / dist) * this.speed;
+                this.y += (dy / dist) * this.speed;
+            }
+
+            // Bot schießt auf nächsten Gegner
+            if (this.shootCooldown === 0) {
+                let enemy = players.find(p => p.team !== this.team && p.hp > 0);
+                if (enemy) {
+                    let edx = enemy.x - this.x;
+                    let edy = enemy.y - this.y;
+                    let edist = Math.hypot(edx, edy);
+                    if (edist < 300) {
+                        projectiles.push(new Projectile(this.x, this.y, edx / edist, edy / edist, this.team));
+                        this.shootCooldown = 40;
+                    }
+                }
+            }
+        }
+
+        // Spielfeldbegrenzung
+        this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+        this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // Basis-Schatten/Aura für Teams
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius + 3, 0, Math.PI * 2);
+        ctx.fillStyle = this.team === "blue" ? "rgba(0, 162, 255, 0.3)" : "rgba(255, 51, 51, 0.3)";
+        ctx.fill();
+
+        if (!this.isBot) {
+            // Genji Nomaden Skin Visualisierung (Hellbrauner/Beiger Mantel, weißer Schal, grünes Haar-Highlight)
+            // 1. Heller Umhang/Körper
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = "#d7ccc8";
+            ctx.fill();
+
+            // 2. Braune Armschützer/Rüstungsteile
+            ctx.fillStyle = "#5d4037";
+            ctx.fillRect(-12, -6, 6, 12);
+            ctx.fillRect(6, -6, 6, 12);
+
+            // 3. Großer weißer Wüstenschal (Hoodie-Kragen) um den Kopf
+            ctx.beginPath();
+            ctx.arc(0, 0, 10, 0, Math.PI * 2);
+            ctx.fillStyle = "#f5f5f5";
+            ctx.fill();
+
+            // 4. Gesicht/Kopfhaut (Braunes Haar, blau/weißes Stirnband-Visier)
+            ctx.beginPath();
+            ctx.arc(0, -2, 6, 0, Math.PI * 2);
+            ctx.fillStyle = "#3e2723";
+            ctx.fill();
+
+            // Stirnband/Visier-Akzent (Blaues Juwel im Bild)
+            ctx.fillStyle = "#00e5ff";
+            ctx.fillRect(-4, -5, 8, 2);
+        } else {
+            // Standard-Bots
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.team === "blue" ? "#0077cc" : "#cc2222";
+            ctx.fill();
+        }
+
+        // Deflect Schild-Effekt (Grün/Cyan leuchtend)
+        if (this.deflectActive > 0) {
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 8, 0, Math.PI * 2);
+            ctx.strokeStyle = "#00ffcc";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+
+        // Dragonblade Effekt (Grüne Aura)
+        if (this.ultActive > 0) {
+            ctx.beginPath();
+            ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = "#76ff03";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // HP-Leiste über dem Kopf
+        ctx.restore();
+        ctx.fillStyle = "#555";
+        ctx.fillRect(this.x - 20, this.y - 25, 40, 5);
+        ctx.fillStyle = this.team === "blue" ? "#00ffcc" : "#ff3333";
+        ctx.fillRect(this.x - 20, this.y - 25, (this.hp / this.maxHp) * 40, 5);
+    }
+
+    useDash() {
+        if (this.dashCooldown > 0 || this.hp <= 0) return;
+        let dx = mouse.x - this.x;
+        let dy = mouse.y - this.y;
+        let dist = Math.hypot(dx, dy);
+        if (dist === 0) return;
+
+        this.dashDir = { x: dx / dist, y: dy / dist };
+        this.dashActive = 10; // Hält 10 Frames an
+        this.dashCooldown = 240; // 4 Sekunden bei 60 FPS
+
+        // Schaden an Gegnern auf der Bahn verursachen
+        players.forEach(p => {
+            if (p.team !== this.team && p.hp > 0) {
+                let pDist = Math.hypot(p.x - this.x, p.y - this.y);
+                if (pDist < 80) p.hp -= 50; // Dash macht 50 Schaden
+            }
+        });
+    }
+
+    useDeflect() {
+        if (this.deflectCooldown > 0 || this.hp <= 0) return;
+        this.deflectActive = 90; // 1.5 Sekunden Schutz
+        this.deflectCooldown = 360; // 6 Sekunden Cooldown
+    }
+
+    useUltimate() {
+        if (this.ultProgress < 100 || this.hp <= 0) return;
+        this.ultActive = 360; // 6 Sekunden ultimative Klinge
+        this.ultProgress = 0;
+    }
+
+    fireWeapon() {
