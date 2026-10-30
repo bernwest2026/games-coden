@@ -1,0 +1,21 @@
+    You said:
+
+    html-datei programieren damit ich in browser spielen kann: gemetory dash
+    ChatGPT said:
+
+    Klar! 😎 Ich programmiere dir ein eigenes Geometry-Dash-Spiel als HTML-Datei, das du direkt im Browser spielen kannst – ohne Installation.
+    🎮 Das Spiel enthält
+        🟦 Einen Würfel, der automatisch nach vorne läuft.
+        🦘 Springen mit Leertaste, Pfeiltaste nach oben oder Mausklick.
+        🔺 Stacheln und Hindernisse, denen du ausweichen musst.
+        💥 Kollisionen mit Hindernissen und die Möglichkeit, neu zu starten.
+        🏆 Einen Punktestand, der steigt, je länger du überlebst.
+        🌈 Neonfarben, einen animierten Hintergrund und Musik im Arcade-Stil.
+    So startest du das Spiel
+        Öffne den Editor Notepad (Windows) oder einen anderen Texteditor.
+        Kopiere den gesamten Code unten hinein.
+        Speichere die Datei als geometry-dash.html. Achte darauf, dass sie nicht geometry-dash.html.txt heißt.
+        Öffne die Datei mit Chrome, Firefox, Edge oder einem anderen Browser.
+    Der HTML-Code für dein Spiel
+
+    Kopiere den gesamten Code in deine HTML-Datei:
