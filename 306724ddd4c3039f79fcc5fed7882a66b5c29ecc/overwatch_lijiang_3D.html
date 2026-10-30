@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Overwatch 3D – Lijiang Arena</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101820;color:#f3f6fa;font:14px system-ui,Arial;display:flex;align-items:center;flex-direction:column;padding:12px}
+h1{margin:2px 0 8px;color:#ffb23e;letter-spacing:3px;font-size:24px}
+#hud{width:min(1000px,98vw);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 8px;font-weight:700}
+#game{width:min(1000px,98vw);height:min(620px,70vh);min-height:360px;background:#111;display:block;border:2px solid #63717e;outline:none;cursor:crosshair}
+#help{max-width:1000px;line-height:1.7;color:#c9d5df;text-align:center;margin-top:8px}button{margin:8px;padding:8px 16px;background:#ffb23e;border:0;border-radius:5px;font-weight:700;cursor:pointer}
+</style></head><body>
+<h1>OVERWATCH 3D</h1>
+<div id="hud"><span style="color:#43c7ff">🔵 BLAU <b id="blue">0</b>%</span><span id="status">KONTROLLPUNKT: NEUTRAL</span><span style="color:#ff5b65">🔴 ROT <b id="red">0</b>%</span><span id="hp">❤️ 200 HP</span></div>
+<canvas id="game" tabindex="0" aria-label="3D-Spielarena"></canvas>
+<div id="help"><b>WASD</b> bewegen · <b>Maus</b> umsehen · <b>Linksklick</b> Shuriken werfen · <b>SHIFT</b> Dash · <b>E</b> Reflektieren · <b>Q</b> Drachenklinge · <b>R</b> Neustart<br>Falls die Maus nicht reagiert: einmal ins Spielfeld klicken. Läuft ohne externe Bibliotheken.</div>
+<button id="restart">Spiel neu starten</button>
+<script>
+(()=> {
+const c=document.getElementById('game'),ctx=c.getContext('2d');
+const blueEl=document.getElementById('blue'),redEl=document.getElementById('red'),statusEl=document.getElementById('status'),hpEl=document.getElementById('hp');
+let W=800,H=500,keys={},px=0,py=0,ang=0,hp=200,blue=0,red=0,shots=[],enemies=[],last=0,fireWait=0,dash=0,reflect=0,ult=0,gameOver=false;
+const mapW=16,mapH=16;
+const grid=[
+'################','################','#..............#','#..##......##..#','#..##......##..#','#..............#','#.....####.....#','#.....#..#.....#','#.....#..#.....#','#.....####.....#','#..............#','#..##......##..#','#..##......##..#','#..............#','################','################'];
+const walls=[];for(let y=0;y<mapH;y++)for(let x=0;x<mapW;x++)if(grid[y][x]==='#')walls.push({x:x+.5,y:y+.5});
+function reset(){px=8;py=12;ang=-Math.PI/2;hp=200;blue=red=ult=0;shots=[];enemies=[];for(let i=0;i<5;i++)enemies.push({x:[3,12,5,10,8][i],y:[4,4,8,8,3][i],hp:100,cd:Math.random()*2});gameOver=false;updateHud()}
+function resize(){let r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2),nw=Math.max(320,Math.floor(r.width*d)),nh=Math.max(280,Math.floor(r.height*d));if(nw!==W||nh!==H){W=nw;H=nh;c.width=W;c.height=H}}
+function wallAt(x,y){if(x<0||y<0||x>=mapW||y>=mapH)return true;return grid[Math.floor(y)]?.[Math.floor(x)]==='#'}
+function ray(a){let s=Math.sin(a),co=Math.cos(a);for(let d=.03;d<22;d+=.025){if(wallAt(px+co*d,py+s*d))return d}return 22}
+function updateHud(){blueEl.textContent=Math.floor(blue);redEl.textContent=Math.floor(red);statusEl.textContent=blue>red?'🔵 BLAU EROBERT':red>blue?'🔴 ROT EROBERT':'KONTROLLPUNKT: UMKÄMPFT';hpEl.textContent='❤️ '+Math.max(0,Math.floor(hp))+' HP'}
+function shoot(){if(fireWait>0||gameOver)return;fireWait=.22;let best=null,bd=99;for(let e of enemies){if(e.hp<=0)continue;let dx=e.x-px,dy=e.y-py,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx),diff=Math.atan2(Math.sin(a-ang),Math.cos(a-ang));if(Math.abs(diff)<.12&&d<bd){let blocked=false;for(let t=.2;t<d;t+=.15)if(wallAt(px+Math.cos(a)*t,py+Math.sin(a)*t)){blocked=true;break}if(!blocked){best=e;bd=d}}}shots.push({t:0});if(best){best.hp-=35;ult=Math.min(100,ult+12);if(best.hp<=0){blue+=5;best.x=[2.5,13.5,4.5,11.5,8][Math.floor(Math.random()*5)];best.y=[3.5,3.5,9.5,9.5,5][Math.floor(Math.random()*5)];best.hp=100}}}
+function draw(){ctx.clearRect(0,0,W,H);let horizon=H*.46;
+let sky=ctx.createLinearGradient(0,0,0,horizon);sky.addColorStop(0,'#172d48');sky.addColorStop(1,'#c17b55');ctx.fillStyle=sky;ctx.fillRect(0,0,W,horizon);
+let floor=ctx.createLinearGradient(0,horizon,0,H);floor.addColorStop(0,'#59666c');floor.addColorStop(1,'#1b252c');ctx.fillStyle=floor;ctx.fillRect(0,horizon,W,H-horizon);
+// futuristic lanterns / skyline
+for(let i=0;i<9;i++){let x=(i*137+W*.07)%W;ctx.fillStyle=i%2?'#253d4b':'#35454b';ctx.fillRect(x,horizon-45-(i%3)*18,22+(i%3)*10,48+(i%3)*18);ctx.fillStyle='#ffbd68';ctx.fillRect(x+5,horizon-36-(i%3)*18,4,8)}
+// raycast walls
+const fov=Math.PI/2.7,cols=Math.ceil(W/3),cw=W/cols;
+for(let i=0;i<cols;i++){let a=ang-fov/2+(i/cols)*fov,d=ray(a)*Math.cos(a-ang),wh=Math.min(H*1.6,H*.92/(d+.15)),top=horizon-wh/2;let shade=Math.max(30,145-d*7);ctx.fillStyle=`rgb(${shade*.65},${shade*.82},${shade})`;ctx.fillRect(i*cw,top,cw+1,wh);ctx.fillStyle=`rgba(0,0,0,${Math.min(.7,d/16)})`;ctx.fillRect(i*cw,top,cw+1,wh);if(d<5){ctx.fillStyle='rgba(255,180,75,.35)';ctx.fillRect(i*cw,top,cw+1,3)}}
+// floor tiles
+ctx.strokeStyle='rgba(180,220,230,.12)';ctx.lineWidth=1;for(let j=1;j<10;j++){let y=horizon+(H-horizon)*(j/10)**1.8;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()} 
+// enemies as billboard sprites
+for(let e of enemies){if(e.hp<=0)continue;let dx=e.x-px,dy=e.y-py,d=Math.hypot(dx,dy),a=Math.atan2(dy,dx),diff=Math.atan2(Math.sin(a-ang),Math.cos(a-ang));if(Math.abs(diff)>fov*.65)continue;let sx=W/2+diff/(fov/2)*(W/2),size=Math.min(H*1.1,H*.72/(d+.25));if(ray(a)<d-.25)continue;let sy=horizon+size*.15;ctx.fillStyle='#9b2639';ctx.fillRect(sx-size*.18,sy-size*.34,size*.36,size*.58);ctx.fillStyle='#ff5265';ctx.beginPath();ctx.arc(sx,sy-size*.43,size*.17,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffd7d7';ctx.fillRect(sx-size*.1,sy-size*.46,size*.05,size*.035);ctx.fillRect(sx+size*.04,sy-size*.46,size*.05,size*.035);ctx.fillStyle='#20252b';ctx.fillRect(sx-size*.22,sy-size*.72,size*.44,5);ctx.fillStyle='#ff5265';ctx.fillRect(sx-size*.22,sy-size*.72,size*.44*(e.hp/100),5)}
+// crosshair and weapon
+ctx.strokeStyle='#c9fbff';ctx.lineWidth=Math.max(2,W/500);ctx.beginPath();ctx.moveTo(W/2-12,H/2);ctx.lineTo(W/2-4,H/2);ctx.moveTo(W/2+4,H/2);ctx.lineTo(W/2+12,H/2);ctx.moveTo(W/2,H/2-12);ctx.lineTo(W/2,H/2-4);ctx.moveTo(W/2,H/2+4);ctx.lineTo(W/2,H/2+12);ctx.stroke();
+ctx.fillStyle='#263a4a';ctx.beginPath();ctx.moveTo(W*.67,H);ctx.lineTo(W*.74,H*.77);ctx.lineTo(W*.84,H*.8);ctx.lineTo(W*.91,H);ctx.fill();ctx.strokeStyle='#46d9ff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(W*.78,H*.83);ctx.lineTo(W*.84,H*.95);ctx.stroke();
+ctx.fillStyle='#fff';ctx.font=`${Math.max(12,W/70)}px system-ui`;ctx.fillText('SHURIKEN  ✦ ✦ ✦',16,H-18);
+if(gameOver){ctx.fillStyle='#000b';ctx.fillRect(0,0,W,H);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 36px system-ui';ctx.fillText('K.O. – Drücke R',W/2,H/2);ctx.textAlign='left'}
+}
+function tick(ts){let dt=Math.min(.05,(ts-last)/1000||0);last=ts;resize();if(!gameOver){fireWait-=dt;dash=Math.max(0,dash-dt);reflect=Math.max(0,reflect-dt);
+let speed=(keys.Shift?5.5:3)*dt,fx=Math.cos(ang),fy=Math.sin(ang),sx=Math.cos(ang+Math.PI/2),sy=Math.sin(ang+Math.PI/2),mx=0,my=0;if(keys.KeyW){mx+=fx;my+=fy}if(keys.KeyS){mx-=fx;my-=fy}if(keys.KeyA){mx-=sx;my-=sy}if(keys.KeyD){mx+=sx;my+=sy}let l=Math.hypot(mx,my)||1;mx=mx/l*speed;my=my/l*speed;if(!wallAt(px+mx*1.5,py))px+=mx;if(!wallAt(px,py+my*1.5))py+=my;
+for(let e of enemies){e.cd-=dt;let dx=px-e.x,dy=py-e.y,d=Math.hypot(dx,dy);if(d>2.3&&d<10){let vx=dx/d*dt*.65,vy=dy/d*dt*.65;if(!wallAt(e.x+vx,e.y))e.x+=vx;if(!wallAt(e.x,e.y+vy))e.y+=vy}if(e.cd<=0&&d<8){e.cd=1.4+Math.random();if(!reflect)hp-=7;else ult=Math.min(100,ult+5);if(hp<=0){hp=0;gameOver=true}}}
+if(keys.Space&&dash<=0){let nx=px+Math.cos(ang)*1.6,ny=py+Math.sin(ang)*1.6;if(!wallAt(nx,ny)){px=nx;py=ny}dash=.8;keys.Space=false}
+if(keys.KeyE&&reflect<=0){reflect=1.1;keys.KeyE=false}if(keys.KeyQ&&ult>=100){for(let e of enemies)if(Math.hypot(e.x-px,e.y-py)<3)e.hp=0;blue+=10;ult=0;keys.KeyQ=false}
+blue=Math.min(100,blue+dt*1.5);if(blue>=100)statusEl.textContent='🔵 SIEG! KONTROLLPUNKT GEHALTEN'
+updateHud()}draw();requestAnimationFrame(tick)}
+c.addEventListener('click',()=>{c.focus();if(c.requestPointerLock)c.requestPointerLock()});document.addEventListener('mousemove',e=>{if(document.pointerLockElement===c)ang+=e.movementX*.0025});c.addEventListener('mousedown',e=>{if(e.button===0)shoot()});
+document.addEventListener('keydown',e=>{keys[e.code]=true;if(['Space','ArrowUp','ArrowDown'].includes(e.code))e.preventDefault()});document.addEventListener('keyup',e=>keys[e.code]=false);document.getElementById('restart').onclick=reset;window.addEventListener('resize',resize);resize();reset();requestAnimationFrame(tick);
+})();
+</script></body></html>
