@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON DASH</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #080817;
+    color: white;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.game-container {
+    width: 95%;
+    max-width: 900px;
+    text-align: center;
+}
+
+h1 {
+    font-size: clamp(32px, 7vw, 55px);
+    color: #00f7ff;
+    text-shadow: 0 0 15px #00f7ff;
+    letter-spacing: 5px;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    color: #aaa;
+    margin-bottom: 20px;
+    font-size: 13px;
+    letter-spacing: 3px;
+}
+
+.game-box {
+    position: relative;
+    border: 3px solid #00f7ff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 25px #00f7ff55;
+    background: #101027;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    touch-action: manipulation;
+}
+
+.hud {
+    display: flex;
+    justify-content: space-between;
+    margin: 15px 5px;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.hud span {
+    color: #00f7ff;
+}
+
+button {
+    background: #00f7ff;
+    color: #080817;
+    border: none;
+    padding: 14px 30px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 10px;
+    box-shadow: 0 0 15px #00f7ff66;
+}
+
+button:hover {
+    background: white;
+    transform: scale(1.04);
+}
+
+.instructions {
+    color: #aaa;
+    font-size: 13px;
+    line-height: 1.8;
+    margin-top: 18px;
+}
+
+#overlay {
+    position: absolute;
+    inset: 0;
+    background: #080817bb;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+}
+
+#overlay h2 {
+    font-size: clamp(28px, 6vw, 45px);
+    color: #00f7ff;
+    text-shadow: 0 0 15px #00f7ff;
+    margin-bottom: 12px;
+}
+
+#overlay p {
+    line-height: 1.8;
+    color: white;
+}
+
+.hidden {
+    display: none !important;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game-container">
+
+    <h1>NEON DASH</h1>
+    <div class="subtitle">JUMP • SURVIVE • WIN</div>
+
+    <div class="game-box">
+
+        <canvas id="game" width="900" height="420"></canvas>
+
+        <div id="overlay">
+            <h2 id="overlayTitle">NEON DASH</h2>
+            <p id="overlayText">
+                Bist du bereit?<br>
+                Springe über die Hindernisse!
+            </p>
+            <button id="startButton">SPIEL STARTEN</button>
+        </div>
+
+    </div>
+
+    <div class="hud">
+        <div>SCORE: <span id="score">0</span></div>
+        <div>BEST: <span id="best">0</span></div>
+        <div>SPEED: <span id="speed">1.0x</span></div>
+    </div>
+
+    <button id="jumpButton">⬆ SPRINGEN</button>
+
+    <div class="instructions">
+        LEERTASTE / KLICK / TOUCH = SPRINGEN<br>
+        Weiche den roten Stacheln aus und knacke deinen Rekord!
+    </div>
+
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const scoreElement = document.getElementById("score");
+const bestElement = document.getElementById("best");
+const speedElement = document.getElementById("speed");
+
+const overlay = document.getElementById("overlay");
+const overlayTitle = document.getElementById("overlayTitle");
+const overlayText = document.getElementById("overlayText");
+const startButton = document.getElementById("startButton");
+const jumpButton = document.getElementById("jumpButton");
+
+const W = canvas.width;
+const H = canvas.height;
+const groundY = 340;
+
+let running = false;
+let dead = false;
+let score = 0;
+let best = loadBest();
+let speed = 6;
+let frames = 0;
+let distance = 0;
+let obstacles = [];
+let particles = [];
+let lastTime = 0;
+let spawnTimer = 0;
+
+const player = {
+    x: 120,
+    y: groundY - 34,
+    size: 34,
+    vy: 0,
+    gravity: 0.8,
+    jumpPower: -15,
+    grounded: true,
+    rotation: 0
+};
+
+bestElement.textContent = best;
+
+function loadBest() {
+    try {
+        return Number(localStorage.getItem("neonDashBest")) || 0;
+    } catch {
+        return 0;
+    }
+}
+
+function saveBest() {
+    try {
+        localStorage.setItem("neonDashBest", best);
+    } catch {}
+}
+
+function resetGame() {
+    score = 0;
+    speed = 6;
+    frames = 0;
+    distance = 0;
+    spawnTimer = 50;
+    obstacles = [];
+    particles = [];
+
+    player.y = groundY - player.size;
+    player.vy = 0;
+    player.grounded = true;
+    player.rotation = 0;
+
+    scoreElement.textContent = "0";
+    speedElement.textContent = "1.0x";
+}
+
+function startGame() {
+    resetGame();
+    dead = false;
+    running = true;
+    overlay.classList.add("hidden");
+    lastTime = performance.now();
+}
+
+function jump() {
+    if (!running) return;
+
+    if (player.grounded) {
+        player.vy = player.jumpPower;
+        player.grounded = false;
+
+        for (let i = 0; i < 7; i++) {
+            particles.push({
+                x: player.x + player.size / 2,
+                y: groundY - 3,
+                vx: Math.random() * 4 - 2,
+                vy: -Math.random() * 4,
+                life: 20,
+                color: "#00f7ff"
+            });
+        }
+    }
+}
+
+function gameOver() {
+    running = false;
+    dead = true;
+
+    if (score > best) {
+        best = score;
+        saveBest();
+        bestElement.textContent = best;
+    }
+
+    overlayTitle.textContent = "GAME OVER!";
+    overlayText.innerHTML =
+        "Dein Score: <b>" + score + "</b><br>" +
+        "Rekord: <b>" + best + "</b><br>" +
+        "Versuche es noch einmal!";
+
+    startButton.textContent = "NOCHMAL SPIELEN";
+    overlay.classList.remove("hidden");
+}
+
+function spawnObstacle() {
+    const size = 30 + Math.random() * 12;
+
+    obstacles.push({
+        x: W + 20,
+        y: groundY - size,
+        w: size,
+        h: size,
+        passed: false
+    });
+
+    // Manchmal erscheinen zwei Stacheln nebeneinander.
+    if (Math.random() < 0.22) {
+        obstacles.push({
+            x: W + 20 + size + 3,
+            y: groundY - size,
+            w: size,
+            h: size,
+            passed: false
+        });
+    }
+}
+
+function addExplosion() {
+    for (let i = 0; i < 25; i++) {
+        particles.push({
+            x: player.x + player.size / 2,
+            y: player.y + player.size / 2,
+            vx: Math.random() * 10 - 5,
+            vy: Math.random() * 10 - 5,
+            life: 35,
+            color: Math.random() > 0.5 ? "#ff285c" : "#00f7ff"
+        });
+    }
+}
+
+function update(dt) {
+    if (!running) return;
+
+    frames += dt;
+    distance += speed * dt;
+
+    score = Math.floor(distance / 12);
+    speed = Math.min(6 + score * 0.018, 12);
+
+    scoreElement.textContent = score;
+    speedElement.textContent = (speed / 6).toFixed(1) + "x";
+
+    // Spielerphysik
+    player.vy += player.gravity * dt;
+    player.y += player.vy * dt;
+
+    if (player.y + player.size >= groundY) {
+        player.y = groundY - player.size;
+        player.vy = 0;
+        player.grounded = true;
+        player.rotation = Math.round(player.rotation / (Math.PI / 2))
+            * (Math.PI / 2);
+    } else {
+        player.grounded = false;
+        player.rotation += 0.09 * dt;
+    }
+
+    // Hindernisse erzeugen
+    spawnTimer -= dt;
+
+    if (spawnTimer <= 0) {
+        spawnObstacle();
+        spawnTimer = 65 + Math.random() * 45;
+        spawnTimer *= 6 / speed;
+    }
+
+    // Hindernisse bewegen und Kollision prüfen
+    for (const obstacle of obstacles) {
+        obstacle.x -= speed * dt;
+
+        if (!obstacle.passed && obstacle.x + obstacle.w < player.x) {
+            obstacle.passed = true;
+        }
+
+        // Etwas kleinere Kollisionsboxen machen das Spiel fairer.
+        const px = player.x + 5;
+        const py = player.y + 5;
+        const ps = player.size - 10;
+
+        const ox = obstacle.x + 5;
+        const oy = obstacle.y + 8;
+        const ow = obstacle.w - 10;
+        const oh = obstacle.h - 8;
+
+        if (
+            px < ox + ow &&
+            px + ps > ox &&
+            py < oy + oh &&
+            py + ps > oy
+        ) {
+            addExplosion();
+            gameOver();
+            break;
+        }
+    }
+
+    obstacles = obstacles.filter(o => o.x + o.w > -10);
+
+    // Partikel
+    for (const p of particles) {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 0.15 * dt;
+        p.life -= dt;
+    }
+
+    particles = particles.filter(p => p.life > 0);
+}
+
+function drawBackground() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, H);
+    gradient.addColorStop(0, "#10102c");
+    gradient.addColorStop(1, "#080817");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, W, H);
+
+    // Sterne
+    for (let i = 0; i < 50; i++) {
+        const x = (i * 173 + 40 - distance * 0.15) % W;
+        const y = (i * 71 + 25) % 280;
+
+        ctx.fillStyle = "#7777bb";
+        ctx.globalAlpha = 0.3 + (i % 3) * 0.2;
+        ctx.fillRect((x + W) % W, y, 2, 2);
+    }
+
+    ctx.globalAlpha = 1;
+
+    // Neon-Gitter
+    ctx.strokeStyle = "#292960";
+    ctx.lineWidth = 1;
+
+    const gridOffset = -(distance * 0.5 % 45);
+
+    for (let x = gridOffset; x < W; x += 45) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, groundY);
+        ctx.stroke();
+    }
+
+    for (let y = 25; y < groundY; y += 45) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+    }
+
+    // Boden
+    ctx.fillStyle = "#151535";
+    ctx.fillRect(0, groundY, W, H - groundY);
+
+    ctx.strokeStyle = "#00f7ff";
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "#00f7ff";
+
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(W, groundY);
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+
+    // Bewegte Bodenmarkierungen
+    for (let x = -(distance % 60); x < W; x += 60) {
+        ctx.fillStyle = "#292960";
+        ctx.fillRect(x, groundY + 25, 30, 3);
+    }
+}
+
+function drawPlayer() {
+    ctx.save();
+
+    ctx.translate(
+        player.x + player.size / 2,
+        player.y + player.size / 2
+    );
+
+    ctx.rotate(player.rotation);
+
+    ctx.shadowColor = "#00f7ff";
+    ctx.shadowBlur = 20;
+
+    const gradient = ctx.createLinearGradient(-17, -17, 17, 17);
+    gradient.addColorStop(0, "#00f7ff");
+    gradient.addColorStop(1, "#2875ff");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(
+        -player.size / 2,
+        -player.size / 2,
+        player.size,
+        player.size
+    );
+
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(
+        -player.size / 2,
+        -player.size / 2,
+        player.size,
+        player.size
+    );
+
+    // Augen
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#080817";
+    ctx.fillRect(-9, -6, 5, 7);
+    ctx.fillRect(4, -6, 5, 7);
+
+    ctx.restore();
+}
+
+function drawObstacles() {
+    for (const obstacle of obstacles) {
+        ctx.save();
+
+        ctx.shadowColor = "#ff285c";
+        ctx.shadowBlur = 15;
+
+        const gradient = ctx.createLinearGradient(
+            obstacle.x,
+            obstacle.y,
+            obstacle.x,
+            groundY
+        );
+
+        gradient.addColorStop(0, "#ff527c");
+        gradient.addColorStop(1, "#c90039");
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.moveTo(obstacle.x, groundY);
+        ctx.lineTo(
+            obstacle.x + obstacle.w / 2,
+            obstacle.y
+        );
+        ctx.lineTo(
+            obstacle.x + obstacle.w,
+            groundY
+        );
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = "#ff91ab";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
+function drawParticles() {
+    for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, p.life / 35);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 5, 5);
+    }
+
+    ctx.globalAlpha = 1;
+}
+
+function draw() {
+    drawBackground();
+    drawObstacles();
+    drawParticles();
+
+    if (!dead || running) {
+        drawPlayer();
+    }
+}
+
+function loop(timestamp) {
+    const dt = Math.min((timestamp - lastTime) / 16.667 || 1, 2);
+    lastTime = timestamp;
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(loop);
+}
+
+startButton.addEventListener("click", startGame);
+jumpButton.addEventListener("pointerdown", jump);
+
+canvas.addEventListener("pointerdown", () => {
+    if (running) {
+        jump();
+    }
+});
+
+document.addEventListener("keydown", event => {
+    if (
+        event.code === "Space" ||
+        event.code === "ArrowUp" ||
+        event.code === "KeyW"
+    ) {
+        event.preventDefault();
+
+        if (running) {
+            jump();
+        } else if (
+            event.code === "Space" &&
+            !event.repeat
+        ) {
+            startGame();
+        }
+    }
+});
+
+draw();
+requestAnimationFrame(timestamp => {
+    lastTime = timestamp;
+    loop(timestamp);
+});
+</script>
+
+</body>
+</html>
+

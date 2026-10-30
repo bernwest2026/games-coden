@@ -1,0 +1,486 @@
+HTML
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BRAWL ARENA</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: #17132b;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    overflow: hidden;
+    user-select: none;
+}
+
+h1 {
+    color: #ffe45c;
+    text-shadow: 3px 4px #d34b23, 0 0 15px #ffb700;
+    margin: 10px 0 5px;
+    font-size: clamp(27px, 5vw, 44px);
+}
+
+#info {
+    display: flex;
+    justify-content: center;
+    gap: 22px;
+    font-weight: bold;
+    margin: 8px;
+    font-size: 15px;
+}
+
+#gameWrap {
+    position: relative;
+    width: min(960px, 100vw);
+    margin: auto;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 4px solid #ffe45c;
+    border-radius: 10px;
+    background: #69b83b;
+    touch-action: none;
+}
+
+#overlay {
+    position: absolute;
+    inset: 0;
+    background: #130f29dd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 20px;
+}
+
+#overlay h2 {
+    font-size: clamp(30px, 7vw, 55px);
+    color: #ffe45c;
+    text-shadow: 3px 4px #d34b23;
+    margin: 0 0 15px;
+}
+
+#overlay p {
+    line-height: 1.7;
+    max-width: 420px;
+}
+
+button {
+    border: 0;
+    border-radius: 12px;
+    background: #ffcf35;
+    color: #36204d;
+    font-weight: 900;
+    font-size: 17px;
+    padding: 13px 25px;
+    cursor: pointer;
+    box-shadow: 0 5px #bd721d;
+}
+
+button:active {
+    transform: translateY(3px);
+    box-shadow: 0 2px #bd721d;
+}
+
+#mobileControls {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    width: min(960px, 100vw);
+    margin: 12px auto;
+    padding: 0 12px;
+    gap: 10px;
+}
+
+.pad {
+    display: grid;
+    grid-template-columns: repeat(3, 44px);
+    grid-template-rows: repeat(2, 40px);
+    gap: 4px;
+}
+
+.pad button, .actionButtons button {
+    padding: 0;
+    width: 44px;
+    height: 40px;
+    font-size: 18px;
+    touch-action: none;
+}
+
+.pad .up { grid-column: 2; }
+.pad .left { grid-column: 1; grid-row: 2; }
+.pad .down { grid-column: 2; grid-row: 2; }
+.pad .right { grid-column: 3; grid-row: 2; }
+
+.actionButtons {
+    display: flex;
+    gap: 8px;
+}
+
+.actionButtons button {
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: #ff6555;
+    color: white;
+}
+
+.actionButtons .super {
+    background: #a65cff;
+}
+
+@media (pointer: coarse) {
+    #mobileControls { display: flex; }
+}
+</style>
+</head>
+
+<body>
+
+<h1>⭐ BRAWL ARENA ⭐</h1>
+
+<div id="info">
+    <div>❤️ <span id="hp">100</span></div>
+    <div>🏆 <span id="score">0</span></div>
+    <div>🌊 Welle <span id="wave">1</span></div>
+</div>
+
+<div id="gameWrap">
+    <canvas id="game" width="960" height="600"></canvas>
+
+    <div id="overlay">
+        <h2 id="title">BRAWL ARENA</h2>
+        <p id="message">
+            Besiege deine Gegner!<br>
+            Bewege dich mit WASD.<br>
+            Ziele mit der Maus und klicke zum Schießen.<br>
+            Leertaste: Spezialangriff
+        </p>
+        <button id="start">KÄMPFEN!</button>
+    </div>
+</div>
+
+<div id="mobileControls">
+    <div class="pad">
+        <button class="up" data-key="w">▲</button>
+        <button class="left" data-key="a">◀</button>
+        <button class="down" data-key="s">▼</button>
+        <button class="right" data-key="d">▶</button>
+    </div>
+    <div class="actionButtons">
+        <button id="shootBtn">🔫</button>
+        <button class="super" id="superBtn">💥</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const W = canvas.width;
+const H = canvas.height;
+
+const hpUI = document.getElementById("hp");
+const scoreUI = document.getElementById("score");
+const waveUI = document.getElementById("wave");
+const overlay = document.getElementById("overlay");
+const titleUI = document.getElementById("title");
+const messageUI = document.getElementById("message");
+const startBtn = document.getElementById("start");
+
+let running = false;
+let score = 0;
+let wave = 1;
+let lastTime = 0;
+let spawnTimer = 0;
+let shootCooldown = 0;
+let superCooldown = 0;
+let damageFlash = 0;
+
+const keys = {};
+const bullets = [];
+const enemyBullets = [];
+const enemies = [];
+const particles = [];
+const walls = [];
+
+const player = {
+    x: W / 2,
+    y: H / 2,
+    r: 19,
+    hp: 100,
+    speed: 245,
+    angle: 0,
+    invincible: 0
+};
+
+const colors = [
+    "#f75d64",
+    "#a45bfa",
+    "#ff9d35",
+    "#35baff",
+    "#ff70b8"
+];
+
+function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+}
+
+function random(min, max) {
+    return min + Math.random() * (max - min);
+}
+
+function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function resetGame() {
+    score = 0;
+    wave = 1;
+    spawnTimer = 0.5;
+    shootCooldown = 0;
+    superCooldown = 0;
+    damageFlash = 0;
+
+    bullets.length = 0;
+    enemyBullets.length = 0;
+    enemies.length = 0;
+    particles.length = 0;
+    walls.length = 0;
+
+    player.x = W / 2;
+    player.y = H / 2;
+    player.hp = 100;
+    player.invincible = 1;
+    player.angle = 0;
+
+    // Hindernisse in der Arena
+    [
+        [180, 130, 115, 38],
+        [665, 130, 115, 38],
+        [180, 430, 115, 38],
+        [665, 430, 115, 38],
+        [420, 100, 42, 95],
+        [420, 405, 42, 95],
+        [315, 270, 75, 38],
+        [570, 270, 75, 38]
+    ].forEach(a => walls.push({
+        x: a[0], y: a[1], w: a[2], h: a[3]
+    }));
+
+    updateUI();
+}
+
+function updateUI() {
+    hpUI.textContent = Math.max(0, Math.ceil(player.hp));
+    scoreUI.textContent = score;
+    waveUI.textContent = wave;
+}
+
+function circleRect(x, y, r, rect) {
+    const cx = clamp(x, rect.x, rect.x + rect.w);
+    const cy = clamp(y, rect.y, rect.y + rect.h);
+    return Math.hypot(x - cx, y - cy) < r;
+}
+
+function blocked(x, y, r) {
+    if (x - r < 12 || x + r > W - 12 ||
+        y - r < 12 || y + r > H - 12) return true;
+
+    return walls.some(w => circleRect(x, y, r, w));
+}
+
+function moveEntity(entity, dx, dy) {
+    const nx = entity.x + dx;
+    if (!blocked(nx, entity.y, entity.r)) entity.x = nx;
+
+    const ny = entity.y + dy;
+    if (!blocked(entity.x, ny, entity.r)) entity.y = ny;
+}
+
+function spawnEnemy() {
+    let x, y;
+
+    for (let i = 0; i < 30; i++) {
+        const side = Math.floor(Math.random() * 4);
+
+        if (side === 0) { x = random(25, W - 25); y = 25; }
+        if (side === 1) { x = random(25, W - 25); y = H - 25; }
+        if (side === 2) { x = 25; y = random(25, H - 25); }
+        if (side === 3) { x = W - 25; y = random(25, H - 25); }
+
+        if (!blocked(x, y, 18) && Math.hypot(x-player.x,y-player.y)>180) {
+            break;
+        }
+    }
+
+    const shooter = wave >= 2 && Math.random() < 0.35;
+
+    enemies.push({
+        x, y,
+        r: shooter ? 17 : 19,
+        hp: shooter ? 55 : 65 + wave * 5,
+        maxHp: shooter ? 55 : 65 + wave * 5,
+        speed: shooter ? 75 + wave * 2 : 85 + wave * 3,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        shooter,
+        cooldown: random(0.5, 1.5),
+        hitFlash: 0
+    });
+}
+
+function makeParticles(x, y, color, amount=8) {
+    for (let i = 0; i < amount; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const s = random(40, 180);
+
+        particles.push({
+            x, y,
+            vx: Math.cos(a) * s,
+            vy: Math.sin(a) * s,
+            life: random(0.2, 0.6),
+            maxLife: 0.6,
+            color,
+            r: random(2, 5)
+        });
+    }
+}
+
+function shoot() {
+    if (!running || shootCooldown > 0) return;
+
+    shootCooldown = 0.22;
+
+    const spread = [-0.10, 0, 0.10];
+
+    spread.forEach(offset => {
+        const a = player.angle + offset;
+
+        bullets.push({
+            x: player.x + Math.cos(a) * 25,
+            y: player.y + Math.sin(a) * 25,
+            vx: Math.cos(a) * 540,
+            vy: Math.sin(a) * 540,
+            r: 6,
+            life: 1.1,
+            damage: 24
+        });
+    });
+
+    makeParticles(
+        player.x + Math.cos(player.angle) * 24,
+        player.y + Math.sin(player.angle) * 24,
+        "#ffe45c", 3
+    );
+}
+
+function superAttack() {
+    if (!running || superCooldown > 0) return;
+
+    superCooldown = 5;
+
+    makeParticles(player.x, player.y, "#bb62ff", 65);
+
+    enemies.forEach(e => {
+        if (distance(player, e) < 155) {
+            e.hp -= 90;
+            e.hitFlash = 0.15;
+            makeParticles(e.x, e.y, "#ffcf35", 10);
+        }
+    });
+
+    // Spezialangriff erzeugt einen sichtbaren Ring.
+    particles.push({
+        x: player.x,
+        y: player.y,
+        vx: 0,
+        vy: 0,
+        life: 0.35,
+        maxLife: 0.35,
+        color: "#c07aff",
+        r: 155,
+        ring: true
+    });
+}
+
+function damagePlayer(amount) {
+    if (player.invincible > 0 || !running) return;
+
+    player.hp -= amount;
+    player.invincible = 0.45;
+    damageFlash = 0.15;
+
+    makeParticles(player.x, player.y, "#ff4c65", 12);
+
+    if (player.hp <= 0) {
+        player.hp = 0;
+        updateUI();
+        endGame();
+    }
+}
+
+function endGame() {
+    running = false;
+    titleUI.textContent = "💥 GAME OVER!";
+    messageUI.innerHTML =
+        "Du hast <b>" + score + "</b> Gegner besiegt!<br>" +
+        "Erreichte Welle: <b>" + wave + "</b><br>" +
+        "Bereit für die Revanche?";
+    startBtn.textContent = "NOCHMAL SPIELEN";
+    overlay.style.display = "flex";
+}
+
+function startGame() {
+    resetGame();
+    running = true;
+    overlay.style.display = "none";
+    lastTime = performance.now();
+}
+
+function update(dt) {
+    if (!running) return;
+
+    shootCooldown = Math.max(0, shootCooldown - dt);
+    superCooldown = Math.max(0, superCooldown - dt);
+    player.invincible = Math.max(0, player.invincible - dt);
+    damageFlash = Math.max(0, damageFlash - dt);
+
+    // Spielerbewegung
+    let dx = 0, dy = 0;
+
+    if (keys["w"] || keys["arrowup"]) dy--;
+    if (keys["s"] || keys["arrowdown"]) dy++;
+    if (keys["a"] || keys["arrowleft"]) dx--;
+    if (keys["d"] || keys["arrowright"]) dx++;
+
+    const len = Math.hypot(dx, dy) || 1;
+    moveEntity(
+        player,
+        dx / len * player.speed * dt,
+        dy / len * player.speed * dt
+    );
+
+    // Mauszielen
+    if (mouse.active) {
+        player.angle = Math.atan2(
+            mouse.y - player.y,
+            mouse.x - player.x
+        );
+    }
+
+    if (mouse.down) shoot();
+
+    // Wellen und Gegner
+    spawnTimer -= dt;
+
+    if (spawnTimer <= 0) {
+        spawn

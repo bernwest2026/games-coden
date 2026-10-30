@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schwingen – Kampf um den Königstitel</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(#183e2c, #071c12);
+    color: white;
+    text-align: center;
+    min-height: 100vh;
+}
+
+header {
+    padding: 18px 10px 8px;
+}
+
+h1 {
+    margin: 0;
+    font-size: clamp(27px, 5vw, 43px);
+    color: #ffd45c;
+    text-shadow: 2px 3px #442d13;
+}
+
+.subtitle {
+    color: #e5f0e7;
+    margin-top: 8px;
+}
+
+.game-container {
+    max-width: 900px;
+    margin: 12px auto;
+    padding: 12px;
+}
+
+.hud {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.fighter-info {
+    background: #102b1e;
+    border: 2px solid #b78b43;
+    border-radius: 12px;
+    padding: 10px;
+    width: 50%;
+}
+
+.name {
+    font-size: 17px;
+    font-weight: bold;
+    margin-bottom: 7px;
+}
+
+.health-bg {
+    background: #4b1e1e;
+    height: 18px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #ffffff66;
+}
+
+.health {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #51dc66, #b3ff70);
+    transition: width 0.15s;
+}
+
+#enemyHealth {
+    background: linear-gradient(90deg, #ffb347, #ff4a4a);
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 4px solid #b78b43;
+    border-radius: 14px;
+    background: #e6c38a;
+    box-shadow: 0 8px 24px #0008;
+    touch-action: none;
+}
+
+#message {
+    min-height: 42px;
+    font-size: 19px;
+    font-weight: bold;
+    color: #ffdf75;
+    padding: 12px 4px;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+button {
+    border: 2px solid #e7bd62;
+    border-radius: 10px;
+    padding: 12px 17px;
+    background: #214b32;
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 3px #09170e;
+}
+
+button:hover {
+    background: #326d45;
+}
+
+button:active {
+    transform: translateY(2px);
+    box-shadow: none;
+}
+
+.restart {
+    background: #8c2525;
+}
+
+.instructions {
+    max-width: 620px;
+    margin: 15px auto;
+    padding: 14px;
+    background: #102b1e;
+    border: 1px solid #477653;
+    border-radius: 12px;
+    line-height: 1.7;
+}
+
+.instructions h2 {
+    color: #ffd45c;
+    margin-top: 0;
+}
+
+.key {
+    display: inline-block;
+    background: #eee;
+    color: #222;
+    border-radius: 5px;
+    padding: 1px 7px;
+    font-weight: bold;
+    box-shadow: 0 2px #999;
+}
+
+footer {
+    color: #b8d2be;
+    font-size: 12px;
+    padding: 15px;
+}
+
+/* Touch controls */
+.mobile-controls {
+    display: none;
+    grid-template-columns: repeat(3, 60px);
+    grid-template-rows: repeat(2, 52px);
+    gap: 6px;
+    justify-content: center;
+    margin: 14px auto;
+}
+
+.mobile-controls button {
+    padding: 5px;
+    font-size: 22px;
+}
+
+.mobile-controls .up {
+    grid-column: 2;
+}
+
+.mobile-controls .left {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.mobile-controls .down {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.mobile-controls .right {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+@media (max-width: 600px) {
+    .mobile-controls {
+        display: grid;
+    }
+
+    .name {
+        font-size: 14px;
+    }
+
+    .fighter-info {
+        padding: 8px;
+    }
+
+    .instructions {
+        font-size: 14px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🇨🇭 SCHWINGEN 🇨🇭</h1>
+    <div class="subtitle">Der Kampf um den Königstitel</div>
+</header>
+
+<main class="game-container">
+
+    <div class="hud">
+        <div class="fighter-info">
+            <div class="name">🔵 DU – Der Herausforderer</div>
+            <div class="health-bg">
+                <div class="health" id="playerHealth"></div>
+            </div>
+        </div>
+
+        <div class="fighter-info">
+            <div class="name">🔴 GEGNER – Der Böse</div>
+            <div class="health-bg">
+                <div class="health" id="enemyHealth"></div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="game" width="800" height="500"></canvas>
+
+    <div id="message">Bereit zum Schwingen? Greif an!</div>
+
+    <div class="controls">
+        <button onclick="attack()">🤼 Schwingerangriff (Leertaste)</button>
+        <button onclick="specialAttack()">💥 Spezialwurf (E)</button>
+        <button class="restart" onclick="restartGame()">🔄 Neu starten</button>
+    </div>
+
+    <div class="mobile-controls">
+        <button class="up" data-key="ArrowUp">⬆️</button>
+        <button class="left" data-key="ArrowLeft">⬅️</button>
+        <button class="down" data-key="ArrowDown">⬇️</button>
+        <button class="right" data-key="ArrowRight">➡️</button>
+    </div>
+
+    <div class="instructions">
+        <h2>🏆 So wirst du Schwingerkönig</h2>
+
+        <b>Bewegen:</b>
+        <span class="key">W</span>
+        <span class="key">A</span>
+        <span class="key">S</span>
+        <span class="key">D</span>
+        oder die Pfeiltasten<br>
+
+        <b>Angreifen:</b>
+        <span class="key">LEERTASTE</span>
+        – Ein normaler Schwingerangriff.<br>
+
+        <b>Spezialwurf:</b>
+        <span class="key">E</span>
+        – Ein kräftiger Angriff mit längerer Abklingzeit.<br>
+
+        <b>Dein Ziel:</b> Besiege deinen Gegner, bevor er dich besiegt!
+        Du kannst ihn durch Angriffe schwächen und aus dem Sägemehlring drängen.
+    </div>
+
+</main>
+
+<footer>
+    Ein kleines Fan-Spiel rund um den Schweizer Nationalsport Schwingen.
+</footer>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const W = canvas.width;
+const H = canvas.height;
+
+const keys = {};
+
+let gameOver = false;
+let winner = "";
+let frame = 0;
+let shake = 0;
+let particles = [];
+let messageTimer = 0;
+
+const ring = {
+    x: 105,
+    y: 45,
+    w: 590,
+    h: 410
+};
+
+const player = {
+    x: 270,
+    y: 250,
+    r: 25,
+    speed: 3.2,
+    health: 100,
+    maxHealth: 100,
+    color: "#397bc0",
+    attackCooldown: 0,
+    specialCooldown: 0,
+    attackAnimation: 0,
+    stun: 0,
+    facing: 1
+};
+
+const enemy = {
+    x: 530,
+    y: 250,
+    r: 25,
+    speed: 1.65,
+    health: 100,
+    maxHealth: 100,
+    color: "#c9473f",
+    attackCooldown: 0,
+    attackAnimation: 0,
+    stun: 0,
+    facing: -1
+};
+
+function setMessage(text, duration = 100) {
+    document.getElementById("message").textContent = text;
+    messageTimer = duration;
+}
+
+function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function createParticles(x, y, color, amount = 12) {
+    for (let i = 0; i < amount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 3 + 1;
+
+        particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1,
+            life: 25 + Math.random() * 15,
+            color,
+            size: Math.random() * 5 + 2
+        });
+    }
+}
+
+function drawBackground() {
+    // Wiese
+    ctx.fillStyle = "#5e9a50";
+    ctx.fillRect(0, 0, W, H);
+
+    // Grasstruktur
+    for (let i = 0; i < 350; i++) {
+        const x = (i * 71) % W;
+        const y = (i * 47) % H;
+
+        ctx.strokeStyle = i % 2 ? "#4f8c43" : "#6ba557";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + 3, y - 4);
+        ctx.stroke();
+    }
+
+    // Zuschauertribünen
+    ctx.fillStyle = "#ded8c6";
+    ctx.fillRect(0, 0, W, 34);
+    ctx.fillRect(0, H - 25, W, 25);
+
+    for (let i = 0; i < 95; i++) {
+        const x = i * 9;
+        const colors = [
+            "#d84040", "#f0ce55", "#4779d1",
+            "#ffffff", "#292929", "#53a65a"
+        ];
+
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.beginPath();
+        ctx.arc(x + 3, 17, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(x + 3, H - 12, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Sägemehlring
+    ctx.fillStyle = "#c79b61";
+    ctx.beginPath();
+    ctx.ellipse(
+        W / 2, H / 2,
+        ring.w / 2 + 8, ring.h / 2 + 8,
+        0, 0, Math.PI * 2
+    );
+    ctx.fill();
+
+    ctx.fillStyle = "#e8cc95";
+    ctx.beginPath();
+    ctx.ellipse(
+        W / 2, H / 2,
+        ring.w / 2, ring.h / 2,
+        0, 0, Math.PI * 2
+    );
+    ctx.fill();
+
+    // Sägemehlspäne
+    for (let i = 0; i < 220; i++) {
+        const x = 110 + ((i * 53) % 580);
+        const y = 50 + ((i * 31) % 400);
+
+        ctx.fillStyle = i % 2 ? "#d9b77c" : "#f1d8a4";
+        ctx.fillRect(x, y, 3, 1);
+    }
+
+    // Ringlinie
+    ctx.strokeStyle = "#9e7040";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(
+        W / 2, H / 2,
+        ring.w / 2, ring.h / 2,
+        0, 0, Math.PI * 2
+    );
+    ctx.stroke();
+
+    // Schweizer Kreuz
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(W / 2 - 21, 5, 42, 24);
+    ctx.fillStyle = "#d52b2b";
+    ctx.fillRect(W / 2 - 17, 8, 34, 18);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(W / 2 - 3, 10, 6, 14);
+    ctx.fillRect(W / 2 - 9, 14, 18, 6);
+}
+
+function drawFighter(f, label) {
+    ctx.save();
+
+    // Schatten
+    ctx.fillStyle = "#0003";
+    ctx.beginPath();
+    ctx.ellipse(f.x, f.y + 20, 30, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Angriffseffekt
+    if (f.attackAnimation > 0) {
+        ctx.globalAlpha = f.attackAnimation / 12;
+        ctx.strokeStyle = "#fff4c1";
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.arc(
+            f.x + f.facing * 22,
+            f.y - 3,
+            33,
+            -1.1,
+            1.1
+        );
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+
+    // Beine
+    ctx.strokeStyle = "#62452f";
+    ctx.lineWidth = 10;
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    ctx.moveTo(f.x - 8, f.y + 12);
+    ctx.lineTo(f.x - 13, f.y + 24);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(f.x + 8, f.y + 12);
+    ctx.lineTo(f.x + 13, f.y + 24);
+    ctx.stroke();
+
+    // Arme
+    ctx.strokeStyle = "#dca47b";
+    ctx.lineWidth = 9;
+
+    ctx.beginPath();
+    ctx.moveTo(f.x - 10, f.y - 7);
+    ctx.lineTo(f.x - 23, f.y + 3);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(f.x + 10, f.y - 7);
+    ctx.lineTo(f.x + 23, f.y + 3);
+    ctx.stroke();
+
+    // Körper
+    ctx.fillStyle = f.color;
+    ctx.beginPath();
+    ctx.ellipse(f.x, f.y, 19, 23, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Schwingerhose
+    ctx.fillStyle = "#eee1c4";
+    ctx.beginPath();
+    ctx.ellipse(f.x, f.y + 13, 17, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#b4a78b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(f.x, f.y + 7);
+    ctx.lineTo(f.x, f.y + 22);
+    ctx.stroke();
+
+    // Kopf
+    ctx.fillStyle = "#e4b28b";
+    ctx.beginPath();
+    ctx.arc(f.x, f.y - 24, 13, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Haare
+    ctx.fillStyle = "#543a28";
+    ctx.beginPath();
+    ctx.arc(f.x, f.y - 29, 12, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    // Gesicht
+    ctx.fillStyle = "#352719";
+    ctx.beginPath();
+    ctx.arc(f.x + 4 * f.facing, f.y - 24, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Name
+    ctx.fillStyle = "#302418";
+    ctx.font = "bold 13px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(label, f.x, f.y - 45);
+
+    ctx.restore();
+}
+
+function updateHealth() {
+    document.getElementById("playerHealth").style.width =
+        (player.health / player.maxHealth * 100) + "%";
+
+    document.getElementById("enemyHealth").style.width =
+        (enemy.health / enemy.maxHealth * 100) + "%";
+}
+
+function movePlayer() {
+    if (gameOver || player.stun > 0) return;
+
+    let dx = 0;
+    let dy = 0;
+
+    if (keys.ArrowLeft || keys.KeyA) dx--;
+    if (keys.ArrowRight || keys.KeyD) dx++;
+    if (keys.ArrowUp || keys.KeyW) dy--;
+    if (keys.ArrowDown || keys.KeyS) dy++;
+
+    if (dx !== 0 || dy !== 0) {
+        const length = Math.hypot(dx, dy);
+
+        dx /= length;
+        dy /= length;
+
+        player.x += dx * player.speed;
+        player.y += dy * player.speed;
+
+        if (dx !== 0) player.facing = Math.sign(dx);
+    }
+
+    player.x = clamp(player.x, 18, W - 18);
+    player.y = clamp(player.y, 43, H - 35);
+}
+
+function moveEnemy() {
+    if (gameOver || enemy.stun > 0) return;
+
+    const d = distance(player, enemy);
+
+    if (d > 43) {
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+        const length = Math.hypot(dx, dy) || 1;
+
+        enemy.x += dx / length * enemy.speed;
+        enemy.y += dy / length * enemy.speed;
+
+        enemy.facing = Math.sign(dx) || enemy.facing;
+    } else {
+        enemy.facing = Math.sign(player.x - enemy.x) || enemy.facing;
+
+        if (enemy.attackCooldown <= 0 && Math.random() < 0.045) {
+            enemyAttack();
+        }
+    }
+
+    enemy.x = clamp(enemy.x, 18, W - 18);
+    enemy.y = clamp(enemy.y, 43, H - 35);
+}
+
+function attack() {
+    if (gameOver || player.attackCooldown > 0 || player.stun > 0) {
+        return;
+    }
+
+    player.attackCooldown = 28;
+    player.attackAnimation = 12;
+
+    const d = distance(player, enemy);
+
+    const dx = enemy.x - player.x;
+    const dy = enemy.y - player.y;
+
+    const inFront = dx * player.facing > -8;
+
+    if (d < 78 && inFront) {
+        const damage = 12 + Math.random() * 8;
+
+        enemy.health = Math.max(0, enemy.health - damage);
+        enemy.stun = 14;
+
+        enemy.x += player.facing * 24;
+
+        createParticles(enemy.x, enemy.y, "#ffffff", 14);
+        shake = 5;
+
+        setMessage("💪 Gut gemacht! Ein sauberer Schwinger!", 60);
+        checkWinner();
+    } else {
+        setMessage("Daneben! Bring dich näher an den Gegner!", 55);
+    }
+}
+
+function specialAttack() {
+    if (gameOver || player.specialCooldown > 0 || player.stun > 0) {
+        if (player.specialCooldown > 0) {
+            setMessage("⏳ Der Spezialwurf muss sich erst aufladen!", 45);
+        }
+        return;
+    }
+
+    player.specialCooldown = 160;
+    player.attackAnimation = 18;
+
+    const d = distance(player, enemy);
+
+    if (d < 100) {
+        const damage = 25 + Math.random() * 15;
+
+        enemy.health = Math.max(0, enemy.health - damage);
+        enemy.stun = 35;
+
+        const dx = enemy.x - player.x;
+        const dy = enemy.y - player.y;
+        const length = Math.hypot(dx, dy) || 1;
+
+        enemy.x += dx / length * 65;
+        enemy.y += dy / length * 45;
+
+        enemy.x = clamp(enemy.x, 18, W - 18);
+        enemy.y = clamp(enemy.y, 43, H - 35);
+
+        createParticles(enemy.x, enemy.y, "#ffd75e", 30);
+        shake = 12;
+
+        setMessage("💥 MEGA-WURF! Das gibt Applaus vom Publikum!", 100);
+        checkWinner();
+    } else {
+        setMessage("Zu weit weg! Der Spezialwurf hat nicht getroffen.", 65);
+    }
+}
+
+function enemyAttack() {
+    if (gameOver) return;
+
+    enemy.attackCooldown = 50;
+    enemy.attackAnimation = 12;
+
+    if (distance(player, enemy) < 72) {
+        const damage = 7 + Math.random() * 8;
+
+        player.health = Math.max(0, player.health - damage);
+        player.stun = 12;
+
+        player.x += enemy.facing * 18;
+
+        createParticles(player.x, player.y, "#ff9a75", 10);
+        shake = 4;
+
+        setMessage("😵 Der Gegner hat dich erwischt!", 60);
+        checkWinner();
+    }
+}
+
+function checkWinner() {
+    updateHealth();
+
+    if (enemy.health <= 0) {
+        gameOver = true;
+        winner = "player";
+
+        setMessage("🏆 SCHWINGERKÖNIG! Du hast den Kampf gewonnen!", 999999);
+        createParticles(enemy.x, enemy.y, "#ffd75e", 70);
+    } else if (player.health <= 0) {
+        gameOver = true;
+        winner = "enemy";
+
+        setMessage("😵 Der Gegner gewinnt! Trainiere und versuche es erneut.", 999999);
+    }
+}
+
+function update() {
+    frame++;
+
+    if (messageTimer > 0) {
+        messageTimer--;
+    }
+
+    if (player.attackCooldown > 0) player.attackCooldown--;
+    if (player.specialCooldown > 0) player.specialCooldown--;
+    if (enemy.attackCooldown > 0) enemy.attackCooldown--;
+
+    if (player.attackAnimation > 0) player.attackAnimation--;
+    if (enemy.attackAnimation > 0) enemy.attackAnimation--;
+
+    if (player.stun > 0) player.stun--;
+    if (enemy.stun > 0) enemy.stun--;
+
+    if (!gameOver) {
+        movePlayer();
+        moveEnemy();
+
+        // Gegner leicht zurückhalten, wenn beide direkt ineinanderstehen
+        const d = distance(player, enemy);
+
+        if (d < 37 && d > 0) {
+            const dx = (enemy.x - player.x) / d;
+            const dy = (enemy.y - player.y) / d;
+
+            enemy.x += dx * 0.6;
+            enemy.y += dy * 0.6;
+        }
+
+        // Aus dem Ring gedrängt?
+        const rx = ring.x + ring.w / 2;
+        const ry = ring.y + ring.h / 2;
+
+        function outsideRing(f) {
+            const nx = (f.x - rx) / (ring.w / 2);
+            const ny = (f.y - ry) / (ring.h / 2);
+
+            return nx * nx + ny * ny > 1.13;
+        }
+
+        if (outsideRing(player)) {
+            player.health = Math.max(0, player.health - 0.5);
+        }
+
+        if (outsideRing(enemy)) {
+            enemy.health = Math.max(0, enemy.health - 0.5);
+        }
+
+        if (frame % 10 === 0) {
+            checkWinner();
+        }
+    }
+
+    // Partikel aktualisieren
+    particles = particles.filter(p => p.life > 0);
+
+    for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.12;
+        p.life--;
+    }
+
+    if (shake > 0) shake *= 0.8;
+    if (shake < 0.3) shake = 0;
+}
+
+function draw() {
+    ctx.save();
+
+    if (shake > 0) {
+        ctx.translate(
+            (Math.random() - 0.5) * shake,
+            (Math.random() - 0.5) * shake
+        );
+    }
+
+    drawBackground();
+
+    // Sägemehlwolke unter den Kämpfern
+    if (!gameOver && frame % 7 === 0 && distance(player, enemy) < 100) {
+        createParticles(
+            (player.x + enemy.x) / 2,
+            (player.y + enemy.y) / 2 + 15,
+            "#d1b078",
+            2
+        );
+    }
+
+    drawFighter(player, "DU");
+    drawFighter(enemy, "GEGNER");
+
+    // Partikel zeichnen
+    for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, p.life / 35);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.globalAlpha = 1;
+
+    if (gameOver) {
+        ctx.fillStyle = "#071c12cc";
+        ctx.fillRect(0, 0, W, H);
+
+        ctx.textAlign = "center";
+
+        ctx.fillStyle = "#ffd45c";
+        ctx.font = "bold 43px Arial";
+        ctx.fillText(
+            winner === "player" ? "SCHWINGERKÖNIG!" : "KAMPF VERLOREN",
+            W / 2,
+            H / 2 - 20
+        );
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "21px Arial";
+        ctx.fillText(
+            winner === "player"
+                ? "Du bist der König im Sägemehl!"
+                : "Der Gegner war heute stärker.",
+            W / 2,
+            H / 2 + 22
+        );
+
+        ctx.font = "17px Arial";
+        ctx.fillText("Klicke auf «Neu starten» für einen neuen Kampf!", W / 2, H / 2 + 62);
+    }
+
+    ctx.restore();
+}
+
+function gameLoop() {
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+function restartGame() {
+    player.x = 270;
+    player.y = 250;
+    player.health = 100;
+    player.attackCooldown = 0;
+    player.specialCooldown = 0;
+    player.attackAnimation = 0;
+    player.stun = 0;
+    player.facing = 1;
+
+    enemy.x = 530;
+    enemy.y = 250;
+    enemy.health = 100;
+    enemy.attackCooldown = 0;
+    enemy.attackAnimation = 0;
+    enemy.stun = 0;
+    enemy.facing = -1;
+
+    particles = [];
+    shake = 0;
+    frame = 0;
+    gameOver = false;
+    winner = "";
+
+    setMessage("Der Kampf beginnt! Zeig, was du draufhast!", 100);
+    updateHealth();
+}
+
+window.addEventListener("keydown", event => {
+    const blocked = [
+        "ArrowUp", "ArrowDown",
+        "ArrowLeft", "ArrowRight", "Space"
+    ];
+
+    if (blocked.includes(event.code)) {
+        event.preventDefault();
+    }
+
+    keys[event.code] = true;
+
+    if (event.repeat) return;
+
+    if (event.code === "Space") attack();
+    if (event.code === "KeyE") specialAttack();
+
+    if (event.code === "KeyR" && gameOver) {
+        restartGame();
+    }
+});
+
+window.addEventListener("keyup", event => {
+    keys[event.code] = false;
+});
+
+window.addEventListener("blur", () => {
+    for (const key in keys) {
+        keys[key] = false;
+    }
+});
+
+// Steuerung für Handys und Tablets
+document.querySelectorAll(".mobile-controls button").forEach(button => {
+    const key = button.dataset.key;
+
+    button.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        keys[key] = true;
+    });
+
+    button.addEventListener("pointerup", event => {
+        event.preventDefault();
+        keys[key] = false;
+    });
+
+    button.addEventListener("pointerleave", () => {
+        keys[key] = false;
+    });
+
+    button.addEventListener("pointercancel", () => {
+        keys[key] = false;
+    });
+});
+
+updateHealth();
+gameLoop();
+</script>
+
+</body>
+</html>
