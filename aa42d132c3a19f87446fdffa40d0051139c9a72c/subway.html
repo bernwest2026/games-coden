@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subway Runner</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #101b35;
+    color: white;
+    user-select: none;
+}
+
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+}
+
+#hud {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: clamp(15px, 3vw, 22px);
+    font-weight: bold;
+    text-shadow: 2px 2px 3px #000;
+    pointer-events: none;
+}
+
+#menu {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #07112799;
+    padding: 20px;
+}
+
+.panel {
+    width: min(420px, 100%);
+    padding: 28px;
+    border-radius: 24px;
+    background: linear-gradient(145deg, #182b59, #10182e);
+    border: 2px solid #50eaff;
+    box-shadow: 0 0 35px #00d9ff44;
+    text-align: center;
+}
+
+h1 {
+    color: #50eaff;
+    font-size: clamp(32px, 8vw, 48px);
+    margin: 0 0 12px;
+}
+
+p {
+    line-height: 1.7;
+}
+
+button {
+    border: 0;
+    border-radius: 14px;
+    padding: 15px 28px;
+    color: #101b35;
+    background: #50eaff;
+    font-size: 19px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:active {
+    transform: scale(.96);
+}
+
+.small {
+    font-size: 13px;
+    opacity: .8;
+}
+
+#touchControls {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    justify-content: space-around;
+    pointer-events: none;
+}
+
+#touchControls button {
+    pointer-events: auto;
+    width: 62px;
+    height: 62px;
+    padding: 0;
+    border-radius: 50%;
+    background: #ffffffbb;
+    font-size: 25px;
+}
+
+@media (pointer: coarse) {
+    #touchControls {
+        display: flex;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="hud">
+    <div>⭐ Punkte: <span id="score">0</span></div>
+    <div>🪙 Münzen: <span id="coins">0</span></div>
+    <div>🏆 Best: <span id="best">0</span></div>
+</div>
+
+<div id="menu">
+    <div class="panel">
+        <h1 id="title">SUBWAY RUNNER</h1>
+        <p id="message">
+            Renne so weit du kannst!<br>
+            Weiche Hindernissen aus und sammle Münzen.
+        </p>
+        <p>
+            ⬅️ ➡️ Spur wechseln<br>
+            ⬆️ Leertaste = Springen<br>
+            ⬇️ Ducken
+        </p>
+        <button id="start">▶ SPIELEN</button>
+        <p class="small">Ein kleines Endless-Runner-Spiel</p>
+    </div>
+</div>
+
+<div id="touchControls">
+    <button data-action="left">⬅️</button>
+    <button data-action="jump">⬆️</button>
+    <button data-action="slide">⬇️</button>
+    <button data-action="right">➡️</button>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const scoreEl = document.getElementById("score");
+const coinsEl = document.getElementById("coins");
+const bestEl = document.getElementById("best");
+const menu = document.getElementById("menu");
+const titleEl = document.getElementById("title");
+const messageEl = document.getElementById("message");
+const startBtn = document.getElementById("start");
+
+let W, H, dpr;
+
+function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+let running = false;
+let lastTime = 0;
+let elapsed = 0;
+let score = 0;
+let coinCount = 0;
+let speed = 0.32;
+let spawnTimer = 0;
+let coinTimer = 0;
+let roadOffset = 0;
+let objects = [];
+let particles = [];
+
+let best = 0;
+
+try {
+    best = Number(localStorage.getItem("subwayRunnerBest")) || 0;
+} catch (e) {}
+
+bestEl.textContent = best;
+
+const player = {
+    lane: 1,
+    xLane: 1,
+    jump: 0,
+    jumpV: 0,
+    slide: 0
+};
+
+function roadGeometry() {
+    return {
+        horizon: H * 0.20,
+        bottom: H * 1.06,
+        center: W / 2,
+        topWidth: W * 0.13,
+        bottomWidth: W * 0.94
+    };
+}
+
+function roadX(lane, depth) {
+    const r = roadGeometry();
+    const perspective = Math.pow(depth, 1.15);
+
+    const roadWidth =
+        r.topWidth + (r.bottomWidth - r.topWidth) * perspective;
+
+    const center = r.center;
+
+    return center + (lane - 1) * roadWidth / 3;
+}
+
+function depthY(depth) {
+    const r = roadGeometry();
+    return r.horizon + (r.bottom - r.horizon) * depth;
+}
+
+function depthScale(depth) {
+    return 0.18 + depth * 1.05;
+}
+
+function polygon(points, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i][0], points[i][1]);
+    }
+
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawBackground() {
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#15234d");
+    sky.addColorStop(0.55, "#4d77a2");
+    sky.addColorStop(1, "#e4a36b");
+
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
+
+    // Sonne
+    ctx.fillStyle = "#ffe5a1";
+    ctx.beginPath();
+    ctx.arc(W * 0.78, H * 0.15, Math.min(W, H) * 0.055, 0, Math.PI * 2);
+    ctx.fill();
+
+    const r = roadGeometry();
+
+    // Gebäude
+    for (let side of [-1, 1]) {
+        for (let i = 0; i < 10; i++) {
+            const depth = i / 10;
+            const y = r.horizon + depth * H * 0.8;
+            const scale = 0.25 + depth * 0.85;
+            const width = (W * 0.045 + (i % 3) * W * 0.018) * scale;
+            const height = (H * 0.14 + (i % 4) * H * 0.035) * scale;
+            const x = W / 2 + side * (W * 0.11 + depth * W * 0.53);
+
+            ctx.fillStyle = i % 2 ? "#263c61" : "#304b70";
+            ctx.fillRect(
+                x - width / 2,
+                y - height,
+                width,
+                height
+            );
+
+            ctx.fillStyle = "#f6d58a";
+
+            const windowSize = Math.max(1, 3 * scale);
+
+            for (let wy = y - height + 8 * scale;
+                 wy < y - 8 * scale;
+                 wy += 13 * scale) {
+
+                for (let wx = x - width / 2 + 5 * scale;
+                     wx < x + width / 2 - 4 * scale;
+                     wx += 10 * scale) {
+
+                    ctx.fillRect(wx, wy, windowSize, windowSize);
+                }
+            }
+        }
+    }
+
+    // Boden
+    polygon([
+        [W / 2 - r.topWidth / 2, r.horizon],
+        [W / 2 + r.topWidth / 2, r.horizon],
+        [W / 2 + r.bottomWidth / 2, r.bottom],
+        [W / 2 - r.bottomWidth / 2, r.bottom]
+    ], "#323e50");
+
+    // Gleisfläche
+    polygon([
+        [W / 2 - r.topWidth / 2, r.horizon],
+        [W / 2 + r.topWidth / 2, r.horizon],
+        [W / 2 + r.bottomWidth / 2, r.bottom],
+        [W / 2 - r.bottomWidth / 2, r.bottom]
+    ], "#343943");
+
+    // Schienen
+    for (let laneEdge of [-1, -1/3, 1/3, 1]) {
+        const x1 = W / 2 + laneEdge * r.topWidth / 2;
+        const x2 = W / 2 + laneEdge * r.bottomWidth / 2;
+
+        ctx.strokeStyle = "#a9b7c6";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x1, r.horizon);
+        ctx.lineTo(x2, r.bottom);
+        ctx.stroke();
+    }
+
+    // Schwellen
+    for (let i = 0; i < 18; i++) {
+        let d = ((i / 18 + roadOffset) % 1);
+        const y = depthY(d);
+        const halfWidth = (r.topWidth + (r.bottomWidth-r.topWidth)*d) / 2;
+
+        ctx.strokeStyle = "#8b929e";
+        ctx.lineWidth = 1 + d * 5;
+
+        ctx.beginPath();
+        ctx.moveTo(W/2 - halfWidth, y);
+        ctx.lineTo(W/2 + halfWidth, y);
+        ctx.stroke();
+    }
+
+    // Gleislinien in der Mitte
+    for (let laneEdge of [-1/3, 1/3]) {
+        const x1 = W / 2 + laneEdge * r.topWidth / 2;
+        const x2 = W / 2 + laneEdge * r.bottomWidth / 2;
+
+        ctx.strokeStyle = "#77818c";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([12, 16]);
+        ctx.beginPath();
+        ctx.moveTo(x1, r.horizon);
+        ctx.lineTo(x2, r.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+}
+
+function drawCoin(obj) {
+    const d = obj.depth;
+    const x = roadX(obj.lane, d);
+    const y = depthY(d);
+    const s = depthScale(d);
+    const radius = 12 * s;
+
+    ctx.save();
+    ctx.translate(x, y - 25 * s);
+    ctx.rotate(Math.sin(elapsed * 5 + obj.depth * 5) * 0.15);
+
+    ctx.fillStyle = "#ffbd24";
+    ctx.strokeStyle = "#fff078";
+    ctx.lineWidth = 3 * s;
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, radius, radius * 1.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#fff4a1";
+    ctx.font = `bold ${Math.max(8, 14*s)}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("$", 0, 0);
+
+    ctx.restore();
+}
+
+function drawObstacle(obj) {
+    const d = obj.depth;
+    const x = roadX(obj.lane, d);
+    const y = depthY(d);
+    const s = depthScale(d);
+
+    const width = 48 * s;
+    const height = (obj.type === "high" ? 85 : 46) * s;
+
+    ctx.save();
+
+    // Schatten
+    ctx.fillStyle = "#0006";
+    ctx.beginPath();
+    ctx.ellipse(x, y, width * 0.7, 8 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (obj.type === "high") {
+        // Schranke zum Ducken
+        ctx.fillStyle = "#ffb51b";
+        ctx.fillRect(x-width/2, y-height, width, height);
+
+        ctx.fillStyle = "#292d38";
+
+        for (let i = -1; i < 3; i++) {
+            ctx.save();
+            ctx.translate(x + i * width / 3, y-height/2);
+            ctx.rotate(-0.65);
+            ctx.fillRect(-3*s, -height, 7*s, height*2);
+            ctx.restore();
+        }
+
+        ctx.fillStyle = "#ffdf70";
+        ctx.fillRect(x-width/2, y-height, width, 5*s);
+    } else {
+        // Kiste zum Springen
+        ctx.fillStyle = "#d85a30";
+        ctx.fillRect(x-width/2, y-height, width, height);
+
+        ctx.fillStyle = "#ff8a45";
+        ctx.fillRect(x-width/2, y-height, width, 8*s);
+
+        ctx.strokeStyle = "#7b301f";
+        ctx.lineWidth = 4*s;
+        ctx.strokeRect(x-width/2, y-height, width, height);
+
+        ctx.beginPath();
+        ctx.moveTo(x-width/2, y-height);
+        ctx.lineTo(x+width/2, y);
+        ctx.moveTo(x+width/2, y-height);
+        ctx.lineTo(x-width/2, y);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+}
+
+function drawPlayer() {
+    const x = roadX(player.xLane, 1);
+    const groundY = H * 0.84;
+    const jumpY = player.jump * H * 0.22;
+    const s = Math.min(W / 430, H / 650, 1.3);
+
+    ctx.save();
+    ctx.translate(x, groundY - jumpY);
+
+    // Schatten
+    ctx.fillStyle = "#0005";
+    ctx.beginPath();
+    ctx.ellipse(0, jumpY > 1 ? 12 : 0, 27*s, 8*s, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    if (player.slide > 0) {
+        // Duck-Animation
+        ctx.rotate(-0.08);
+
+        ctx.fillStyle = "#ffca8a";
+        ctx.beginPath();
+        ctx.arc(15*s, -22*s, 13*s, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.fillStyle = "#14bde5";
+        ctx.fillRect(-22*s, -24*s, 35*s, 18*s);
+
+        ctx.fillStyle = "#202c49";
+        ctx.fillRect(-24*s, -8*s, 20*s, 10*s);
+        ctx.fillRect(5*s, -8*s, 24*s, 10*s);
+    } else {
+        // Beine
+        ctx.strokeStyle = "#202c49";
+        ctx.lineWidth = 10*s;
+        ctx.lineCap = "round";
+
+        const run = Math.sin(elapsed * 17) * 9*s;
+
+        ctx.beginPath();
+        ctx.moveTo(-6*s, -25*s);
+        ctx.lineTo(-10*s + run, 0);
+        ctx.moveTo(6*s, -25*s);
+        ctx.lineTo(10*s - run, 0);
+        ctx.stroke();
+
+        // Schuhe
+        ctx.fillStyle = "#f5f5ff";
+        ctx.fillRect(-22*s + run, -4*s, 15*s, 6*s);
+        ctx.fillRect(7*s - run, -4*s, 15*s, 6*s);
+
+        // Arme
+        ctx.strokeStyle = "#ffca8a";
+        ctx.lineWidth = 8*s;
+
+        ctx.beginPath();
+        ctx.moveTo(-12*s, -49*s);
+        ctx.lineTo(-22*s - run*.5, -30*s);
+        ctx.moveTo(12*s, -49*s);
+        ctx.lineTo(22*s + run*.5, -34*s);
+        ctx.stroke();
+
+        // Körper
+        ctx.fillStyle = "#12bde5";
+        ctx.fillRect(-14*s, -58*s, 28*s, 34*s);
+
+        // Jacke
+        ctx.fillStyle = "#087da8";
+        ctx.fillRect(-14*s, -38*s, 28*s, 8*s);
+
+        // Kopf
+        ctx.fillStyle = "#ffca8a";
+        ctx.beginPath();
+        ctx.arc(0, -72*s, 14*s, 0, Math.PI*2);
+        ctx.fill();
+
+        // Haare
+        ctx.fillStyle = "#38291f";
+        ctx.beginPath();
+        ctx.arc(-2*s, -78*s, 13*s, Math.PI, Math.PI*2);
+        ctx.lineTo(12*s, -72*s);
+        ctx.lineTo(-12*s, -72*s);
+        ctx.fill();
+
+        // Augen
+        ctx.fillStyle = "#202c49";
+        ctx.beginPath();
+        ctx.arc(5*s, -72*s, 2*s, 0, Math.PI*2);
+        ctx.fill();
+
+        // Rucksack
+        ctx.fillStyle = "#ff6b48";
+        ctx.fillRect(-20*s, -55*s, 7*s, 22*s);
+    }
+
+    ctx.restore();
+}
+
+function spawnObstacle() {
+    const lane = Math.floor(Math.random() * 3);
+    const type = Math.random() < 0.45 ? "high" : "low";
+
+    objects.push({
+        kind: "obstacle",
+        lane,
+        type,
+        depth: 0.02
+    });
+}
+
+function spawnCoinLine() {
+    const lane = Math.floor(Math.random() * 3);
+
+    for (let i = 0; i < 5; i++) {
+        objects.push({
+            kind: "coin",
+            lane,
+            depth: -i * 0.10
+        });
+    }
+}
+
+function moveLane(direction) {
+    if (!running) return;
+
+    player.lane = Math.max(0, Math.min(2, player.lane + direction));
+}
+
+function jump() {
+    if (!running) return;
+
+    if (player.jump <= 0 && player.slide <= 0) {
+        player.jumpV = 2.7;
+    }
+}
+
+function slide() {
+    if (!running) return;
+
+    if (player.jump <= 0) {
+        player.slide = 0.65;
+    }
+}
+
+function action(name) {
+    if (name === "left") moveLane(-1);
+    if (name === "right") moveLane(1);
+    if (name === "jump") jump();
+    if (name === "slide") slide();
+}
+
+window.addEventListener("keydown", e => {
+    const keys = [
+        "ArrowLeft", "ArrowRight", "ArrowUp",
+        "ArrowDown", "Space", "KeyA", "KeyD",
+        "KeyW", "KeyS"
+    ];
+
+    if (keys.includes(e.code)) e.preventDefault();
+
+    if (e.repeat) return;
+
+    if (!running && (e.code === "Space" || e.code === "Enter")) {
+        startGame();
+        return;
+    }
+
+    if (e.code === "ArrowLeft" || e.code === "KeyA")
+        action("left");
+
+    if (e.code === "ArrowRight" || e.code === "KeyD")
+        action("right");
+
+    if (e.code === "ArrowUp" || e.code === "KeyW" || e.code === "Space")
+        action("jump");
+
+    if (e.code === "ArrowDown" || e.code === "KeyS")
+        action("slide");
+});
+
+document.querySelectorAll("[data-action]").forEach(button => {
+    button.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        action(button.dataset.action);
+    });
+});
+
+// Touch-Wischsteuerung
+let touchStartX = 0;
+let touchStartY = 0;
+
+canvas.addEventListener("touchstart", e => {
+    const t = e.changedTouches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+}, { passive: true });
+
+canvas.addEventListener("touchend", e => {
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 25) return;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+        action(dx > 0 ? "right" : "left");
+    } else {
+        action(dy < 0 ? "jump" : "slide");
+    }
+}, { passive: true });
+
+function startGame() {
+    running = true;
+    elapsed = 0;
+    score = 0;
+    coinCount = 0;
+    speed = 0.32;
+    spawnTimer = 0;
+    coinTimer = 0;
+    roadOffset = 0;
+
+    objects = [];
+    particles = [];
+
+    player.lane = 1;
+    player.xLane = 1;
+    player.jump = 0;
+    player.jumpV = 0;
+    player.slide = 0;
+
+    menu.style.display = "none";
+
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+}
+
+function gameOver() {
+    running = false;
+
+    if (score > best) {
+        best = score;
+        bestEl.textContent = best;
+
+        try {
+            localStorage.setItem("subwayRunnerBest", String(best));
+        } catch (e) {}
+    }
+
+    titleEl.textContent = "GAME OVER!";
+    titleEl.style.color = "#ff765f";
+
+    messageEl.innerHTML =
+        `Du hast <b>${score}</b> Punkte erreicht!<br>` +
+        `🪙 Gesammelte Münzen: <b>${coinCount}</b><br>` +
+        `🏆 Bestleistung: <b>${best}</b>`;
+
+    startBtn.textContent = "🔄 NOCHMAL SPIELEN";
+    menu.style.display = "flex";
+}
+
+function update(dt) {
+    elapsed += dt;
+    score += Math.floor(dt * 10);
+    speed = Math.min(0.32 + elapsed * 0.003, 0.70);
+
+    roadOffset = (roadOffset + dt * speed * 0.9) % 1;
+
+    player.xLane += (player.lane - player.xLane) *
+        Math.min(1, dt * 12);
+
+    // Springen
+    if (player.jumpV !== 0 || player.jump > 0) {
+        player.jump += player.jumpV * dt;
+        player.jumpV -= 6.5 * dt;
+
+        if (player.jump <= 0) {
+            player.jump = 0;
+            player.jumpV = 0;
+        }
+    }
+
+    // Ducken
+    player.slide = Math.max(0, player.slide - dt);
+
+    // Hindernisse
+    spawnTimer -= dt;
+
+    if (spawnTimer <= 0) {
+        spawnObstacle();
+        spawnTimer = Math.max(0.58, 1.15 - elapsed * 0.004)
+            + Math.random() * 0.35;
+    }
+
+    // Münzen
+    coinTimer -= dt;
+
+    if (coinTimer <= 0) {
+        spawnCoinLine();
+        coinTimer = 1.7 + Math.random() * 1.3;
+    }
+
+    for (const obj of objects) {
+        obj.depth += dt * speed;
+
+        if (obj.depth > 0.91 && obj.depth < 1.03 &&
+            Math.abs(player.xLane - obj.lane) < 0.34) {
+
+            if (obj.kind === "coin" && !obj.collected) {
+                obj.collected = true;
+                coinCount++;
+                score += 25;
+            }
+
+            if (obj.kind === "obstacle" && !obj.checked) {
+                obj.checked = true;
+
+                const safelyJumping = player.jump > 0.34;
+                const safelySliding = player.slide > 0.10;
+
+                if (obj.type === "low" && !safelyJumping) {
+                    gameOver();
+                    return;
+                }
+
+                if (obj.type === "high" && !safelySliding) {
+                    gameOver();
+                    return;
+                }
+            }
+        }
+    }
+
+    objects = objects.filter(obj =>
+        obj.depth < 1.15 &&
+        !(obj.kind === "coin" && obj.collected)
+    );
+
+    scoreEl.textContent = score;
+    coinsEl.textContent = coinCount;
+}
+
+function draw() {
+    drawBackground();
+
+    // Entfernte Objekte zuerst zeichnen
+    const sorted = [...objects].sort((a, b) => a.depth - b.depth);
+
+    for (const obj of sorted) {
+        if (obj.depth < 0) continue;
+
+        if (obj.kind === "coin") {
+            if (!obj.collected) drawCoin(obj);
+        } else {
+            drawObstacle(obj);
+        }
+    }
+
+    drawPlayer();
+
+    // Bodenhinweis
+    if (!running) return;
+
+    ctx.fillStyle = "#ffffffbb";
+    ctx.font = "bold 13px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("LAUFE WEITER!", W/2, H-18);
+}
+
+function loop(timestamp) {
+    if (!running) return;
+
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.04);
+    lastTime = timestamp;
+
+    update(dt);
+    draw();
+
+    if (running) requestAnimationFrame(loop);
+}
+
+startBtn.addEventListener("click", startGame);
+
+// Hintergrund auch vor dem Spielstart zeichnen
+drawBackground();
+drawPlayer();
+</script>
+
+</body>
+</html>
+function update(dt) {
+    elapsed += dt;
+    score += dt * 10;
+
+    speed = Math.min(0.32 + elapsed * 0.003, 0.70);
+    roadOffset = (roadOffset + dt * speed * 0.9) % 1;
+
+    // Spurwechsel flüssig und zuverlässig
+    player.xLane += (player.lane - player.xLane) *
+        Math.min(1, dt * 12);
+
+    if (Math.abs(player.lane - player.xLane) < 0.015) {
+        player.xLane = player.lane;
+    }
+
+    // Springen
+    if (player.jumpV !== 0 || player.jump > 0) {
+        player.jump += player.jumpV * dt;
+        player.jumpV -= 6.5 * dt;
+
+        if (player.jump <= 0) {
+            player.jump = 0;
+            player.jumpV = 0;
+        }
+    }
+
+    // Ducken
+    player.slide = Math.max(0, player.slide - dt);
+
+    // Hindernisse erzeugen
+    spawnTimer -= dt;
+
+    if (spawnTimer <= 0) {
+        spawnObstacle();
+
+        spawnTimer =
+            Math.max(0.85, 1.35 - elapsed * 0.003) +
+            Math.random() * 0.4;
+    }
+
+    // Münzen erzeugen
+    coinTimer -= dt;
+
+    if (coinTimer <= 0) {
+        spawnCoinLine();
+        coinTimer = 1.7 + Math.random() * 1.3;
+    }
+
+    // Objekte bewegen und Kollisionen überprüfen
+    for (const obj of objects) {
+        const previousDepth = obj.depth;
+
+        obj.depth += dt * speed;
+
+        // Nur prüfen, wenn das Objekt den Spielerbereich erreicht.
+        // Der Bereich ist enger, damit du nicht zu früh stirbst.
+        const reachedPlayer =
+            previousDepth <= 0.985 && obj.depth >= 0.985;
+
+        const sameLane =
+            Math.abs(player.xLane - obj.lane) < 0.24;
+
+        if (
+            obj.kind === "coin" &&
+            !obj.collected &&
+            obj.depth >= 0.94 &&
+            obj.depth <= 1.06 &&
+            sameLane
+        ) {
+            obj.collected = true;
+            coinCount++;
+            score += 25;
+        }
+
+        if (
+            obj.kind === "obstacle" &&
+            !obj.checked &&
+            reachedPlayer &&
+            sameLane
+        ) {
+            obj.checked = true;
+
+            // Niedrige Hindernisse: darüber springen
+            const safelyJumping = player.jump > 0.28;
+
+            // Hohe Hindernisse: darunter durchrutschen
+            const safelySliding = player.slide > 0.05;
+
+            if (obj.type === "low" && !safelyJumping) {
+                gameOver();
+                return;
+            }
+
+            if (obj.type === "high" && !safelySliding) {
+                gameOver();
+                return;
+            }
+        }
+    }
+
+    // Alte Objekte entfernen
+    objects = objects.filter(obj =>
+        obj.depth < 1.15 &&
+        !(obj.kind === "coin" && obj.collected)
+    );
+
+    scoreEl.textContent = Math.floor(score);
+    coinsEl.textContent = coinCount;
+}
+
