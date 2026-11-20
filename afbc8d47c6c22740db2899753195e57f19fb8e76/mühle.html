@@ -1,0 +1,292 @@
+```html
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mühle-Spiel</title>
+
+<style>
+body {
+  background: #151827;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 20px;
+}
+
+h1 { color: #ffc857; }
+
+#status {
+  font-size: 18px;
+  margin: 15px;
+  padding: 12px;
+  background: #282d42;
+  border-radius: 10px;
+}
+
+svg {
+  width: min(95vw, 600px);
+  height: auto;
+  background: #202438;
+  border-radius: 15px;
+}
+
+.line {
+  fill: none;
+  stroke: #e9d8b4;
+  stroke-width: 4;
+}
+
+.point {
+  cursor: pointer;
+  fill: #414963;
+  stroke: white;
+  stroke-width: 2;
+}
+
+.white { fill: #fff2d0; }
+.black { fill: #101010; }
+.selected { stroke: #ffc857; stroke-width: 6; }
+.target { stroke: #62e6a5; stroke-width: 6; }
+
+button {
+  margin: 10px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #ffc857;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h1>⚪ MÜHLE ⚫</h1>
+
+<p>Spieler 1: Hell | Spieler 2: Dunkel</p>
+<p id="status">Spieler 1: Setze einen Stein.</p>
+<p>
+  ⚪ Verbleibend: <span id="whiteCount">9</span> |
+  ⚫ Verbleibend: <span id="blackCount">9</span>
+</p>
+
+<svg id="board" viewBox="0 0 600 600"></svg>
+
+<br>
+<button onclick="init()">Neues Spiel</button>
+
+<script>
+const svg = document.getElementById("board");
+
+const points = [
+ [40,40],[300,40],[560,40],[560,300],
+ [560,560],[300,560],[40,560],[40,300],
+ [130,130],[300,130],[470,130],[470,300],
+ [470,470],[300,470],[130,470],[130,300],
+ [220,220],[300,220],[380,220],[380,300],
+ [380,380],[300,380],[220,380],[220,300]
+];
+
+const paths = [
+ [0,1,2,3,4,5,6,7,0],
+ [8,9,10,11,12,13,14,15,8],
+ [16,17,18,19,20,21,22,23,16],
+ [1,9,17],[3,11,19],[5,13,21],[7,15,23]
+];
+
+let neighbors = Array.from({length:24},()=>new Set());
+let mills = [];
+
+function setupBoard() {
+  paths.forEach(path => {
+    for(let i=0;i<path.length-1;i++) {
+      neighbors[path[i]].add(path[i+1]);
+      neighbors[path[i+1]].add(path[i]);
+    }
+  });
+
+  paths.slice(0,3).forEach(path => {
+    for(let i=0;i<8;i+=2)
+      mills.push([path[i],path[i+1],path[i+2]]);
+  });
+}
+
+let board, player, placed, selected, removing, gameOver;
+
+function init() {
+  board = Array(24).fill(0);
+  player = 1;
+  placed = [0,0,0];
+  selected = null;
+  removing = false;
+  gameOver = false;
+  render("Setze einen Stein.");
+}
+
+function count(p) {
+  return board.filter(x=>x===p).length;
+}
+
+function isMill(i,p) {
+  return mills.some(m=>m.includes(i)&&m.every(j=>board[j]===p));
+}
+
+function removeTargets() {
+  let enemy = 3-player;
+  let stones = board.map((v,i)=>v===enemy?i:-1)
+                    .filter(i=>i>=0);
+  let outside = stones.filter(i=>!isMill(i,enemy));
+  return outside.length ? outside : stones;
+}
+
+function targets() {
+  if(selected===null) return [];
+  if(count(player)===3) {
+    return board.map((v,i)=>v===0?i:-1).filter(i=>i>=0);
+  }
+  return [...neighbors[selected]].filter(i=>board[i]===0);
+}
+
+function hasMove(p) {
+  if(count(p)===3) return board.includes(0);
+  return board.some((v,i)=>v===p&&
+    [...neighbors[i]].some(j=>board[j]===0));
+}
+
+function clickPoint(i) {
+  if(gameOver) return;
+
+  if(removing) {
+    if(board[i]!==3-player ||
+       !removeTargets().includes(i)) return;
+
+    board[i]=0;
+    removing=false;
+    finishTurn();
+    return;
+  }
+
+  if(placed[player]<9) {
+    if(board[i]!==0) return;
+
+    board[i]=player;
+    placed[player]++;
+
+    if(isMill(i,player)) {
+      removing=true;
+      render("MÜHLE! Entferne einen gegnerischen Stein.");
+    } else {
+      finishTurn();
+    }
+    return;
+  }
+
+  if(selected===null) {
+    if(board[i]===player) {
+      selected=i;
+      render("Wähle einen grünen Punkt zum Ziehen.");
+    }
+    return;
+  }
+
+  if(board[i]===player) {
+    selected=i;
+    render("Wähle einen grünen Punkt zum Ziehen.");
+    return;
+  }
+
+  if(board[i]!==0 || !targets().includes(i)) return;
+
+  board[i]=player;
+  board[selected]=0;
+  selected=null;
+
+  if(isMill(i,player)) {
+    removing=true;
+    render("MÜHLE! Entferne einen gegnerischen Stein.");
+  } else {
+    finishTurn();
+  }
+}
+
+function finishTurn() {
+  selected=null;
+  removing=false;
+
+  let enemy=3-player;
+
+  if(placed[1]===9 && placed[2]===9 &&
+     (count(enemy)<3 || !hasMove(enemy))) {
+    gameOver=true;
+    render("Spieler "+player+" GEWINNT! 🎉");
+    return;
+  }
+
+  player=enemy;
+
+  if(placed[1]===9 && placed[2]===9 &&
+     (count(player)<3 || !hasMove(player))) {
+    gameOver=true;
+    render("Spieler "+(3-player)+" GEWINNT! 🎉");
+    return;
+  }
+
+  render(placed[player]<9
+    ? "Setze einen Stein."
+    : "Wähle einen Stein und ziehe ihn.");
+}
+
+function render(message) {
+  svg.innerHTML="";
+
+  paths.forEach(path=>{
+    let poly=document.createElementNS(
+      "http://www.w3.org/2000/svg","polyline");
+
+    poly.setAttribute("points",
+      path.map(i=>points[i].join(",")).join(" "));
+    poly.setAttribute("class","line");
+    svg.appendChild(poly);
+  });
+
+  let hints=removing ? removeTargets() : targets();
+
+  points.forEach(([x,y],i)=>{
+    let circle=document.createElementNS(
+      "http://www.w3.org/2000/svg","circle");
+
+    circle.setAttribute("cx",x);
+    circle.setAttribute("cy",y);
+    circle.setAttribute("r",board[i] ? 17 : 11);
+
+    let cls="point";
+    if(board[i]===1) cls+=" white";
+    if(board[i]===2) cls+=" black";
+    if(selected===i) cls+=" selected";
+    if(hints.includes(i)) cls+=" target";
+
+    circle.setAttribute("class",cls);
+    circle.addEventListener("click",()=>clickPoint(i));
+    svg.appendChild(circle);
+  });
+
+  document.getElementById("whiteCount").textContent=count(1);
+  document.getElementById("blackCount").textContent=count(2);
+
+  document.getElementById("status").textContent =
+    gameOver ? message :
+    "Spieler "+player+": "+message;
+}
+
+setupBoard();
+init();
+</script>
+
+</body>
+</html>
+```
